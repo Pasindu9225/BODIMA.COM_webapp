@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
-import { LayoutDashboard, Users, Building, PlusCircle, MessageSquareQuote, User, Settings, LifeBuoy } from 'lucide-react';
+import { LayoutDashboard, Users, Building, PlusCircle, MessageSquareQuote, User, Settings, LifeBuoy, Map } from 'lucide-react';
 
 export type NavLink = {
   href: string;
@@ -16,11 +16,12 @@ export const iconMap = {
   MessageSquareQuote,
   User,
   Settings,
-  LifeBuoy
+  LifeBuoy,
+  Map,
 };
 
 export const studentNavLinks: NavLink[] = [
-  { href: '/student/dashboard', label: 'Dashboard', iconName: 'LayoutDashboard' },
+  { href: '/map', label: 'Map', iconName: 'Map' },
   { href: '/student/recommendations', label: 'Recommendations', iconName: 'MessageSquareQuote' },
   { href: '#', label: 'Profile', iconName: 'User' },
   { href: '#', label: 'Help', iconName: 'LifeBuoy' },

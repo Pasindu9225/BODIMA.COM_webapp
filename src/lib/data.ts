@@ -1,0 +1,65 @@
+import { PlaceHolderImages } from "./placeholder-images";
+
+export const universities = [
+  { name: 'University of Colombo', lat: 6.902, lng: 79.861 },
+  { name: 'University of Peradeniya', lat: 7.254, lng: 80.596 },
+  { name: 'University of Moratuwa', lat: 6.796, lng: 79.901 },
+  { name: 'University of Sri Jayewardenepure', lat: 6.853, lng: 79.904 },
+  { name: 'University of Kelaniya', lat: 6.973, lng: 79.916 },
+  { name: 'University of Ruhuna', lat: 5.938, lng: 80.576 },
+  { name: 'NSBM Green University', lat: 6.821, lng: 80.042 },
+  { name: 'SLIIT', lat: 6.914, lng: 79.973 },
+];
+
+export const listings = [
+  {
+    id: '1',
+    title: 'Cozy Room near University of Colombo',
+    location: 'Colombo',
+    price: 15000,
+    imageUrl: PlaceHolderImages.find((p) => p.id === 'accommodation-1')?.imageUrl ?? '',
+    imageHint: PlaceHolderImages.find((p) => p.id === 'accommodation-1')?.imageHint,
+    lat: 6.905,
+    lng: 79.863,
+  },
+  {
+    id: '2',
+    title: 'Modern Apartment near SLIIT',
+    location: 'Malabe',
+    price: 25000,
+    imageUrl: PlaceHolderImages.find((p) => p.id === 'accommodation-2')?.imageUrl ?? '',
+    imageHint: PlaceHolderImages.find((p) => p.id === 'accommodation-2')?.imageHint,
+    lat: 6.915,
+    lng: 79.971,
+  },
+  {
+    id: '3',
+    title: 'Quiet Studio near University of Peradeniya',
+    location: 'Peradeniya',
+    price: 20000,
+    imageUrl: PlaceHolderImages.find((p) => p.id === 'accommodation-3')?.imageUrl ?? '',
+    imageHint: PlaceHolderImages.find((p) => p.id === 'accommodation-3')?.imageHint,
+    lat: 7.256,
+    lng: 80.592,
+  },
+  {
+    id: '4',
+    title: 'Shared Room for Two, Nugegoda',
+    location: 'Nugegoda',
+    price: 12000,
+    imageUrl: PlaceHolderImages.find((p) => p.id === 'accommodation-4')?.imageUrl ?? '',
+    imageHint: PlaceHolderImages.find((p) => p.id === 'accommodation-4')?.imageHint,
+    lat: 6.86,
+    lng: 79.89,
+  },
+   {
+    id: '5',
+    title: 'Annex with A/C, Moratuwa',
+    location: 'Moratuwa',
+    price: 18000,
+    imageUrl: PlaceHolderImages.find((p) => p.id === 'accommodation-1')?.imageUrl ?? '',
+    imageHint: 'modern annex',
+    lat: 6.79,
+    lng: 79.895,
+  },
+];

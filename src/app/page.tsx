@@ -102,7 +102,7 @@ export default function Home() {
             </p>
             <div className="mt-10 flex justify-center gap-4">
               <Button asChild size="lg" variant="secondary">
-                <Link href="/student/dashboard">
+                <Link href="/map">
                   Find a Place <ArrowRight />
                 </Link>
               </Button>
