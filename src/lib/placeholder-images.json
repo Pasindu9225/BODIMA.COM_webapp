@@ -1,3 +1,58 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "hero-1",
+      "description": "A comfortable and modern living room space.",
+      "imageUrl": "https://images.unsplash.com/photo-1612419299101-6c294dc2901d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw4fHxjb3p5JTIwbGl2aW5ncm9vbXxlbnwwfHx8fDE3NjE3MDcwODF8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "cozy livingroom"
+    },
+    {
+      "id": "accommodation-1",
+      "description": "A cozy, well-lit student room with a desk and a bed.",
+      "imageUrl": "https://images.unsplash.com/photo-1547560444-e3a9cbe4419f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw4fHxzdHVkZW50JTIwcm9vbXxlbnwwfHx8fDE3NjE2ODMxOTl8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "student room"
+    },
+    {
+      "id": "accommodation-2",
+      "description": "A modern apartment with clean lines and simple furniture.",
+      "imageUrl": "https://images.unsplash.com/photo-1653972233229-1b8c042d6d8e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw5fHxtb2Rlcm4lMjBhcGFydG1lbnR8ZW58MHx8fHwxNzYxNzI1MDc0fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "modern apartment"
+    },
+    {
+      "id": "accommodation-3",
+      "description": "A bright studio with large windows and a sea view.",
+      "imageUrl": "https://images.unsplash.com/photo-1608145640433-937abd82a4e1?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw4fHxicmlnaHQlMjBzdHVkaW98ZW58MHx8fHwxNzYxNzY2MzA3fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "bright studio"
+    },
+    {
+      "id": "accommodation-4",
+      "description": "A spacious room with two beds for sharing.",
+      "imageUrl": "https://images.unsplash.com/photo-1556978082-fc2023bb5081?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxzaGFyZWQlMjByb29tfGVufDB8fHx8MTc2MTY0NzI2MXww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "shared room"
+    },
+    {
+      "id": "avatar-1",
+      "description": "A portrait of a young smiling woman.",
+      "imageUrl": "https://images.unsplash.com/photo-1690444963408-9573a17a8058?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw3fHxzbWlsaW5nJTIwd29tYW58ZW58MHx8fHwxNzYxNjgzNzc0fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "smiling woman"
+    },
+    {
+      "id": "avatar-2",
+      "description": "A portrait of a middle-aged man with glasses.",
+      "imageUrl": "https://images.unsplash.com/photo-1612694790876-bec1383fbb40?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw5fHxtYW4lMjBnbGFzc2VzfGVufDB8fHx8MTc2MTcxNzA5OXww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "man glasses"
+    },
+    {
+      "id": "avatar-3",
+      "description": "A portrait of a young woman with a thoughtful expression.",
+      "imageUrl": "https://images.unsplash.com/photo-1620058011052-a264bf06900b?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw4fHx0aG91Z2h0ZnVsJTIwd29tYW58ZW58MHx8fHwxNzYxNzE4NDkwfDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "thoughtful woman"
+    },
+    {
+      "id": "login-art",
+      "description": "An abstract geometric pattern with blue and orange colors.",
+      "imageUrl": "https://images.unsplash.com/photo-1454117096348-e4abbeba002c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxMHx8YWJzdHJhY3QlMjBnZW9tZXRyaWN8ZW58MHx8fHwxNzYxNzUzMjM1fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "abstract geometric"
+    }
+  ]
 }
