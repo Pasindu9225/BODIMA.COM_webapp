@@ -4,8 +4,10 @@
 import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import type { Listing } from '@/lib/types';
+import { AccommodationCard } from './accommodation-card';
+
 
 // Fix for default icon not showing in Next.js
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -67,14 +69,16 @@ const MapEvents = ({ onPopupClose }: { onPopupClose: () => void }) => {
   return null;
 };
 
-export default function LeafletMap({ center, zoom, markers, selectedListing, onMarkerClick, onPopupClose }: LeafletMapProps) {
+export default function LeafletMap({ 
+  center, 
+  zoom, 
+  markers, 
+  selectedListing, 
+  onMarkerClick, 
+  onPopupClose 
+}: LeafletMapProps) {
+  
   const popupRef = useRef<L.Popup | null>(null);
-  const mapRef = useRef<HTMLDivElement>(null);
-  const [isMounted, setIsMounted] = useState(false);
-
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
 
   useEffect(() => {
     if (popupRef.current) {
@@ -82,44 +86,36 @@ export default function LeafletMap({ center, zoom, markers, selectedListing, onM
     }
   }, [selectedListing]);
   
-  // A key is added to MapContainer to ensure it's re-created if the ref somehow changes.
-  const mapKey = mapRef.current ? 'leaflet-map-loaded' : 'leaflet-map-loading';
-
   return (
-    <div ref={mapRef} style={{ height: '100%', width: '100%' }}>
-      {isMounted && mapRef.current && (
-        <MapContainer 
-          key={mapKey}
-          center={center} 
-          zoom={zoom} 
-          scrollWheelZoom={true} 
-          style={{ height: '100%', width: '100%', zIndex: 1 }}
+    <MapContainer 
+      center={center} 
+      zoom={zoom} 
+      scrollWheelZoom={true} 
+      style={{ height: '100%', width: '100%', zIndex: 1 }}
+    >
+      <ChangeView center={center} zoom={zoom} />
+      <TileLayer
+        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+      />
+      <MapEvents onPopupClose={onPopupClose} />
+      {markers.map((marker, idx) => (
+        <Marker 
+          key={idx} 
+          position={marker.position} 
+          eventHandlers={{ click: () => onMarkerClick(marker.item) }}
+          icon={marker.type === 'university' ? universityIcon : listingIcon}
         >
-          <ChangeView center={center} zoom={zoom} />
-          <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          />
-          <MapEvents onPopupClose={onPopupClose} />
-          {markers.map((marker, idx) => (
-            <Marker 
-              key={idx} 
-              position={marker.position} 
-              eventHandlers={{ click: () => onMarkerClick(marker.item) }}
-              icon={marker.type === 'university' ? universityIcon : listingIcon}
-            >
-              {marker.type === 'listing' && (
-                 <Popup ref={popupRef}>
-                   {marker.popupContent}
-                 </Popup>
-              )}
-               {marker.type === 'university' && (
-                 <Popup>{marker.popupContent}</Popup>
-              )}
-            </Marker>
-          ))}
-        </MapContainer>
-      )}
-    </div>
+          {marker.type === 'listing' && (
+             <Popup ref={popupRef}>
+               {marker.popupContent}
+             </Popup>
+          )}
+           {marker.type === 'university' && (
+             <Popup>{marker.popupContent}</Popup>
+          )}
+        </Marker>
+      ))}
+    </MapContainer>
   );
 }
