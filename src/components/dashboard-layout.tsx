@@ -17,6 +17,7 @@ import { Button } from './ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from './ui/dropdown-menu';
 import { LogOut, Search } from 'lucide-react';
 import type { NavLink } from '@/lib/nav-links';
+import { iconMap } from '@/lib/nav-links';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Input } from './ui/input';
@@ -38,16 +39,19 @@ export function DashboardLayout({ children, navLinks, user }: DashboardLayoutPro
         </SidebarHeader>
         <SidebarContent>
           <SidebarMenu>
-            {navLinks.map((link) => (
-              <SidebarMenuItem key={link.href}>
-                <Link href={link.href} passHref legacyBehavior>
-                  <SidebarMenuButton isActive={pathname === link.href} tooltip={link.label}>
-                    <link.icon/>
-                    <span>{link.label}</span>
-                  </SidebarMenuButton>
-                </Link>
-              </SidebarMenuItem>
-            ))}
+            {navLinks.map((link) => {
+              const Icon = iconMap[link.iconName];
+              return (
+                <SidebarMenuItem key={link.href}>
+                  <Link href={link.href} passHref legacyBehavior>
+                    <SidebarMenuButton isActive={pathname === link.href} tooltip={link.label}>
+                      <Icon />
+                      <span>{link.label}</span>
+                    </SidebarMenuButton>
+                  </Link>
+                </SidebarMenuItem>
+              );
+            })}
           </SidebarMenu>
         </SidebarContent>
         <SidebarFooter>
