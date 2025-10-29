@@ -3,7 +3,7 @@
 import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Listing } from '@/lib/types';
 
 // Fix for default icon not showing in Next.js
@@ -59,6 +59,8 @@ function ChangeView({ center, zoom }: { center: [number, number], zoom: number }
 
 export default function LeafletMap({ center, zoom, markers, selectedListing, onMarkerClick, onPopupClose }: LeafletMapProps) {
   const popupRef = useRef<L.Popup | null>(null);
+  const [map, setMap] = useState<L.Map | null>(null);
+
 
   const MapEvents = () => {
     useMapEvents({
@@ -74,7 +76,7 @@ export default function LeafletMap({ center, zoom, markers, selectedListing, onM
   }, [selectedListing]);
 
   return (
-    <MapContainer center={center} zoom={zoom} scrollWheelZoom={true} style={{ height: '100%', width: '100%', zIndex: 1 }}>
+    <MapContainer whenCreated={setMap} center={center} zoom={zoom} scrollWheelZoom={true} style={{ height: '100%', width: '100%', zIndex: 1 }}>
       <ChangeView center={center} zoom={zoom} />
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
