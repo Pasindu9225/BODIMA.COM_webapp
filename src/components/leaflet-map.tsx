@@ -1,10 +1,9 @@
-
 'use client';
 
 import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, memo } from 'react';
 import type { Listing } from '@/lib/types';
 import { AccommodationCard } from './accommodation-card';
 
@@ -69,7 +68,8 @@ const MapEvents = ({ onPopupClose }: { onPopupClose: () => void }) => {
   return null;
 };
 
-export default function LeafletMap({ 
+// Memoize the component to prevent re-renders from parent state changes
+const LeafletMap = memo(function LeafletMap({ 
   center, 
   zoom, 
   markers, 
@@ -118,4 +118,6 @@ export default function LeafletMap({
       ))}
     </MapContainer>
   );
-}
+});
+
+export default LeafletMap;
