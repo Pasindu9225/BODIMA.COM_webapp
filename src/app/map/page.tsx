@@ -1,15 +1,14 @@
-
 'use client';
 
-import { useState, useMemo } from 'react';
-import { GoogleMap, useJsApiLoader, Marker, InfoWindow } from '@react-google-maps/api';
+import { useState, useMemo, Suspense } from 'react';
+import dynamic from 'next/dynamic';
 import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { universities, listings } from '@/lib/data';
 import { AccommodationCard } from '@/components/accommodation-card';
-import { MapPin, Search, Loader2, Menu } from 'lucide-react';
+import { Search, Menu, University as UniversityIcon, MapPin } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
 
 type University = {
   name: string;
@@ -19,53 +18,18 @@ type University = {
 
 type Listing = (typeof listings)[0];
 
-const containerStyle = {
-  width: '100%',
-  height: '100%',
-};
-
-const mapCenter = {
-  lat: 7.8731,
-  lng: 80.7718,
-};
-
-const mapOptions = {
-  disableDefaultUI: true,
-  zoomControl: true,
-  styles: [
-    { elementType: 'geometry', stylers: [{ color: '#f5f5f5' }] },
-    { elementType: 'labels.icon', stylers: [{ visibility: 'off' }] },
-    { elementType: 'labels.text.fill', stylers: [{ color: '#616161' }] },
-    { elementType: 'labels.text.stroke', stylers: [{ color: '#f5f5f5' }] },
-    { featureType: 'administrative.land_parcel', elementType: 'labels.text.fill', stylers: [{ color: '#bdbdbd' }] },
-    { featureType: 'poi', elementType: 'geometry', stylers: [{ color: '#eeeeee' }] },
-    { featureType: 'poi', elementType: 'labels.text.fill', stylers: [{ color: '#757575' }] },
-    { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: '#e5e5e5' }] },
-    { featureType: 'poi.park', elementType: 'labels.text.fill', stylers: [{ color: '#9e9e9e' }] },
-    { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#ffffff' }] },
-    { featureType: 'road.arterial', elementType: 'labels.text.fill', stylers: [{ color: '#757575' }] },
-    { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#dadada' }] },
-    { featureType: 'road.highway', elementType: 'labels.text.fill', stylers: [{ color: '#616161' }] },
-    { featureType: 'road.local', elementType: 'labels.text.fill', stylers: [{ color: '#9e9e9e' }] },
-    { featureType: 'transit.line', elementType: 'geometry', stylers: [{ color: '#e5e5e5' }] },
-    { featureType: 'transit.station', elementType: 'geometry', stylers: [{ color: '#eeeeee' }] },
-    { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#c9c9c9' }] },
-    { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#9e9e9e' }] },
-  ],
-};
-
-
-export default function MapPage() {
-  const { isLoaded, loadError } = useJsApiLoader({
-    id: 'google-map-script',
-    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '',
-  });
-
+const MapPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedUniversity, setSelectedUniversity] = useState<University | null>(null);
   const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
   const [isSheetOpen, setIsSheetOpen] = useState(true);
-  const [map, setMap] = useState<google.maps.Map | null>(null);
+  const [mapCenter, setMapCenter] = useState<[number, number]>([7.8731, 80.7718]);
+  const [mapZoom, setMapZoom] = useState(8);
+
+  const LeafletMap = useMemo(() => dynamic(() => import('@/components/leaflet-map'), { 
+    ssr: false,
+    loading: () => <Skeleton className="h-full w-full" />
+  }), []);
 
   const filteredUniversities = useMemo(() => {
     if (!searchTerm) return [];
@@ -77,87 +41,59 @@ export default function MapPage() {
   const handleUniversitySelect = (uni: University) => {
     setSelectedUniversity(uni);
     setSearchTerm(uni.name);
-    if (map) {
-      map.panTo({ lat: uni.lat, lng: uni.lng });
-      map.setZoom(14);
-    }
+    setMapCenter([uni.lat, uni.lng]);
+    setMapZoom(14);
+    setSelectedListing(null); 
   };
   
   const handleListingSelect = (listing: Listing) => {
     setSelectedListing(listing);
-     if (map) {
-      map.panTo({ lat: listing.lat, lng: listing.lng });
-    }
+    setMapCenter([listing.lat, listing.lng]);
+    setMapZoom(15);
   }
 
-  const onLoad = (map: google.maps.Map) => {
-    setMap(map);
+  const handleMarkerClick = (item: Listing | University) => {
+    if ('price' in item) { // It's a listing
+      handleListingSelect(item);
+    } else { // It's a university
+      handleUniversitySelect(item);
+    }
   };
-  
-  const onUnmount = () => {
-    setMap(null);
-  };
+
+  const universityMarkers = universities.map(uni => ({
+    position: [uni.lat, uni.lng] as [number, number],
+    popupContent: uni.name,
+    item: uni,
+    type: 'university' as const,
+  }));
+
+  const listingMarkers = listings.map(listing => ({
+    position: [listing.lat, listing.lng] as [number, number],
+    popupContent: (
+      <div className="w-64">
+        <AccommodationCard listing={listing} />
+      </div>
+    ),
+    item: listing,
+    type: 'listing' as const,
+  }));
+
+  const allMarkers = [...universityMarkers, ...listingMarkers];
 
   return (
     <div className="relative h-[calc(100vh-theme(spacing.14))] w-full">
-      {isLoaded ? (
-        <GoogleMap
-          mapContainerStyle={containerStyle}
-          center={mapCenter}
-          zoom={8}
-          options={mapOptions}
-          onLoad={onLoad}
-          onUnmount={onUnmount}
-        >
-          {universities.map(uni => (
-            <Marker 
-              key={uni.name}
-              position={{ lat: uni.lat, lng: uni.lng }}
-              title={uni.name}
-              onClick={() => handleUniversitySelect(uni)}
-              icon={{
-                path: window.google.maps.SymbolPath.CIRCLE,
-                fillColor: '#FF0000',
-                fillOpacity: 1,
-                strokeColor: '#FFFFFF',
-                strokeWeight: 2,
-                scale: 6
-              }}
-            />
-          ))}
-
-          {listings.map(listing => (
-            <Marker 
-              key={listing.id}
-              position={{ lat: listing.lat, lng: listing.lng }}
-              title={listing.title}
-              onClick={() => handleListingSelect(listing)}
-            />
-          ))}
-          
-          {selectedListing && (
-            <InfoWindow
-              position={{ lat: selectedListing.lat, lng: selectedListing.lng }}
-              onCloseClick={() => setSelectedListing(null)}
-            >
-              <div className="w-64">
-                <AccommodationCard listing={selectedListing} />
-              </div>
-            </InfoWindow>
-          )}
-
-        </GoogleMap>
-      ) : loadError ? (
-        <div className="flex h-full w-full items-center justify-center bg-muted">
-          <p className="text-destructive-foreground">Error loading map. Please check your API key.</p>
-        </div>
-      ) : (
-        <Skeleton className="h-full w-full" />
-      )}
+      <LeafletMap 
+        center={mapCenter}
+        zoom={mapZoom}
+        markers={allMarkers}
+        selectedListing={selectedListing}
+        onMarkerClick={handleMarkerClick}
+        onPopupClose={() => setSelectedListing(null)}
+      />
 
       <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
         <SheetTrigger asChild>
-          <Button variant="outline" size="icon" className="absolute top-4 left-4 z-10 sm:hidden">
+          <Button variant="outline" size="icon" className="absolute top-4 left-4 z-[1000] sm:hidden">
             <Menu />
           </Button>
         </SheetTrigger>
@@ -185,8 +121,9 @@ export default function MapPage() {
                             handleUniversitySelect(uni)
                             if (window.innerWidth < 640) setIsSheetOpen(false)
                           }}
-                          className="cursor-pointer px-4 py-2 hover:bg-accent"
+                          className="cursor-pointer px-4 py-2 hover:bg-accent flex items-center gap-2"
                         >
+                          <UniversityIcon className="h-4 w-4 text-muted-foreground" />
                           {uni.name}
                         </li>
                       ))}
@@ -200,10 +137,13 @@ export default function MapPage() {
 
             <div className="space-y-4">
                 <h3 className="font-semibold">Suggestions</h3>
-                <div className="grid grid-cols-1 gap-4">
+                <div className="grid grid-cols-1 gap-4 overflow-y-auto max-h-[calc(100vh-18rem)] pr-2">
                     {listings.map(listing => (
-                        <div key={listing.id} onClick={() => handleListingSelect(listing)} className="cursor-pointer">
-                          <AccommodationCard  listing={listing} />
+                        <div key={listing.id} onClick={() => {
+                            handleListingSelect(listing)
+                            if (window.innerWidth < 640) setIsSheetOpen(false)
+                          }} className="cursor-pointer">
+                          <AccommodationCard listing={listing} />
                         </div>
                     ))}
                 </div>
@@ -215,3 +155,4 @@ export default function MapPage() {
   );
 }
 
+export default MapPage;
