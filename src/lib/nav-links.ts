@@ -26,13 +26,13 @@ export const studentNavLinks: NavLink[] = [];
 export const providerNavLinks: NavLink[] = [
   { href: '/provider/dashboard', label: 'Dashboard', iconName: 'LayoutDashboard' },
   { href: '/provider/listings/new', label: 'Add Listing', iconName: 'PlusCircle' },
-  { href: '#', label: 'Profile', iconName: 'User' },
-  { href: '#', label: 'Settings', iconName: 'Settings' },
+  { href: '/provider/profile', label: 'Profile', iconName: 'User' },
+  { href: '/provider/settings', label: 'Settings', iconName: 'Settings' },
 ];
 
 export const adminNavLinks: NavLink[] = [
   { href: '/admin/dashboard', label: 'Dashboard', iconName: 'LayoutDashboard' },
-  { href: '#', label: 'Users', iconName: 'Users' },
-  { href: '#', label: 'Listings', iconName: 'Building' },
-  { href: '#', label: 'Settings', iconName: 'Settings' },
+  { href: '/admin/users', label: 'Users', iconName: 'Users' },
+  { href: '/admin/listings', label: 'Listings', iconName: 'Building' },
+  { href: '/admin/settings', label: 'Settings', iconName: 'Settings' },
 ];
