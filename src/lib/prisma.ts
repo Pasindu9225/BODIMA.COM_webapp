@@ -1,19 +1,22 @@
 import { PrismaClient } from '@prisma/client';
 
-// Declare a global variable to hold the Prisma Client instance
-// This is to avoid creating a new PrismaClient on every hot reload in development
-declare global {
-  // eslint-disable-next-line no-var
-  var prisma: PrismaClient | undefined;
+// This is the new, crucial part.
+// We declare a global variable to hold the prisma client.
+const globalForPrisma = global as unknown as {
+  prisma: PrismaClient | undefined;
+};
+
+// We check if the prisma client already exists on the global object.
+// If not, we create a new one.
+export const prisma =
+  globalForPrisma.prisma ??
+  new PrismaClient({
+    // Optional: Log all database queries to the console
+    // log: ['query'], 
+  });
+
+// In development, we save the new client to the global object
+// so it can be reused on the next hot-reload.
+if (process.env.NODE_ENV !== 'production') {
+  globalForPrisma.prisma = prisma;
 }
-
-// If 'prisma' is not on the global object, create a new instance
-// Otherwise, use the existing global instance
-const prisma = global.prisma || new PrismaClient();
-
-// In development, assign the prisma instance to the global object
-if (process.env.NODE_ENV === 'development') {
-  global.prisma = prisma;
-}
-
-export default prisma;
