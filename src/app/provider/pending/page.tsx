@@ -1,3 +1,4 @@
+'use client';
 import { BordimaLogo } from '@/components/bordima-logo';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -19,7 +20,7 @@ export default function ProviderPendingPage() {
             <CardTitle className="mt-4 font-headline text-2xl">Thank You for Registering!</CardTitle>
             <CardDescription>
               Your application has been submitted successfully. Our team will review your information and you will be notified via email once your account is approved. This usually takes 2-3 business days.
-            </cardDescription>
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <Button asChild>
