@@ -3,18 +3,22 @@ import { useRouter } from 'next/navigation';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import Link from 'next/link';
+import { useToast } from '@/hooks/use-toast';
 import { BordimaLogo } from '@/components/bordima-logo';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import Link from 'next/link';
 import { Checkbox } from '@/components/ui/checkbox';
+import { registerProvider } from '@/lib/actions';
 
 const providerRegisterSchema = z.object({
   providerName: z.string().min(1, 'Provider name is required.'),
   contactName: z.string().min(1, 'Contact person name is required.'),
+  email: z.string().email('A valid email address is required.'),
+  password: z.string().min(8, 'Password must be at least 8 characters.'),
   phone: z.string().min(10, 'A valid phone number is required.'),
   address: z.string().min(1, 'Address is required.'),
   nic: z.string().min(10, 'NIC number is required.'),
@@ -26,11 +30,14 @@ const providerRegisterSchema = z.object({
 
 export default function ProviderRegisterPage() {
   const router = useRouter();
+  const { toast } = useToast();
   const form = useForm<z.infer<typeof providerRegisterSchema>>({
     resolver: zodResolver(providerRegisterSchema),
     defaultValues: {
       providerName: '',
       contactName: '',
+      email: '',
+      password: '',
       phone: '',
       address: '',
       nic: '',
@@ -38,10 +45,25 @@ export default function ProviderRegisterPage() {
     },
   });
 
-  const onSubmit = (values: z.infer<typeof providerRegisterSchema>) => {
-    // Mock provider registration logic
-    console.log(values);
-    router.push('/provider/pending');
+  const onSubmit = async (values: z.infer<typeof providerRegisterSchema>) => {
+    try {
+      const result = await registerProvider(values);
+      if (result.success) {
+        router.push('/provider/pending');
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Registration Failed',
+          description: result.message,
+        });
+      }
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Uh oh!',
+        description: 'An unexpected error occurred. Please try again.',
+      });
+    }
   };
 
   return (
@@ -61,6 +83,34 @@ export default function ProviderRegisterPage() {
             <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                   <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                    <FormField
+                      control={form.control}
+                      name="email"
+                      render={({ field }) => (
+                      <FormItem>
+                          <FormLabel>Login Email</FormLabel>
+                          <FormControl>
+                          <Input placeholder="your-email@example.com" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                      </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="password"
+                      render={({ field }) => (
+                      <FormItem>
+                          <FormLabel>Password</FormLabel>
+                          <FormControl>
+                          <Input type="password" placeholder="••••••••" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                      </FormItem>
+                      )}
+                    />
+                  </div>
+                   <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                     <FormField
                         control={form.control}
                         name="providerName"
@@ -162,8 +212,8 @@ export default function ProviderRegisterPage() {
                         </FormItem>
                       )}
                     />
-                <Button type="submit" className="w-full">
-                    Submit for Approval
+                <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
+                    {form.formState.isSubmitting ? 'Submitting...' : 'Submit for Approval'}
                 </Button>
                 </form>
             </Form>

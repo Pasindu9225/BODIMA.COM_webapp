@@ -1,20 +1,20 @@
-// This block defines our database connection
-datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL") // Loads from the .env file
-}
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-// This tells Prisma how to generate its code
 generator client {
   provider = "prisma-client-js"
 }
 
-// ---------------------------------------------
-// ENUMS (Our custom types)
-// ---------------------------------------------
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ENUMs for custom types
 enum Role {
-  ADMIN
+  STUDENT
   PROVIDER
+  ADMIN
 }
 
 enum UserStatus {
@@ -27,41 +27,32 @@ enum ListingStatus {
   PENDING
   APPROVED
   REJECTED
-  DEACTIVATED
 }
 
-enum Gender {
-  MALE
-  FEMALE
-  ANY
-}
-
-// ---------------------------------------------
-// AUTH MODELS (Required by Next-Auth)
-// ---------------------------------------------
-
-// This is our CUSTOM User model, merged with Next-Auth
+// User Model: Core user account information
 model User {
-  id            String       @id @default(cuid())
+  id            String    @id @default(cuid())
   name          String?
-  email         String?      @unique
+  email         String?   @unique
   emailVerified DateTime?
   image         String?
-  password      String?      // We use this for our custom login
-  accounts      Account[]
-  sessions      Session[]
+  password      String? // Required for Credentials provider
+  role          Role      @default(STUDENT)
+  status        UserStatus @default(APPROVED)
 
-  // --- OUR CUSTOM FIELDS ---
-  phone         String?
-  address       String?
-  role          Role         @default(PROVIDER)
-  status        UserStatus   @default(PENDING)
-  listings      Listing[]
+  accounts Account[]
+  sessions Session[]
   
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
+  // Relations
+  providerProfile Provider? // A user can have one provider profile
+  listings        Listing[] // A provider can have multiple listings
+  bookmarks       Bookmark[] // A student can have multiple bookmarks
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
+// Next-Auth required models
 model Account {
   id                String  @id @default(cuid())
   userId            String
@@ -97,48 +88,90 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
-// ---------------------------------------------
-// OUR APPLICATION MODELS
-// ---------------------------------------------
+// Application-specific models
 
-model University {
-  id        String  @id @default(cuid())
-  name      String  @unique
-  latitude  Float
-  longitude Float
-}
+// Provider Model: Detailed profile for a boarding provider
+model Provider {
+  id        String @id @default(cuid())
+  userId    String @unique
+  user      User   @relation(fields: [userId], references: [id])
+  name      String // The business name, e.g., "Sunil Properties"
+  phone     String
+  address   String
+  nic       String @unique
+  isVerified Boolean @default(false) // Admin approved
 
-model Listing {
-  id            String        @id @default(cuid())
-  title         String
-  description   String        @db.Text
-  address       String
-  latitude      Float
-  longitude     Float
-  price         Decimal       @db.Decimal(10, 2)
-  gender        Gender        @default(ANY)
-  status        ListingStatus @default(PENDING)
-
-  provider   User   @relation(fields: [providerId], references: [id])
-  providerId String
-
-  images    ListingImage[]
-  amenities Amenity[]      @relation("AmenityToListing")
-  
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
-model ListingImage {
-  id        String  @id @default(cuid())
-  url       String
-  listing   Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
-  listingId String
+// Listing Model: A single accommodation unit
+model Listing {
+  id          String        @id @default(cuid())
+  title       String
+  description String
+  address     String
+  city        String
+  lat         Float
+  lng         Float
+  price       Float
+  roomType    String // e.g., "Single", "Shared"
+  status      ListingStatus @default(PENDING)
+  
+  providerId String
+  provider   User   @relation(fields: [providerId], references: [id])
+
+  amenities   ListingAmenity[]
+  photos      Photo[]
+  bookmarks   Bookmark[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
+// Amenity Model: Features like Wi-Fi, A/C
 model Amenity {
-  id       String    @id @default(cuid())
-  name     String    @unique
-  icon     String?
-  listings Listing[] @relation("AmenityToListing")
+  id    String @id @default(cuid())
+  name  String @unique
+  icon  String // e.g., "wifi", "bath" (for icon library mapping)
+  
+  listings ListingAmenity[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Join table for Listings and Amenities
+model ListingAmenity {
+  listingId String
+  amenityId String
+  listing   Listing @relation(fields: [listingId], references: [id])
+  amenity   Amenity @relation(fields: [amenityId], references: [id])
+
+  @@id([listingId, amenityId])
+}
+
+// Photo Model: Images for a listing
+model Photo {
+  id        String  @id @default(cuid())
+  listingId String
+  listing   Listing @relation(fields: [listingId], references: [id])
+  url       String
+  isCover   Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Bookmark Model: A student's saved listing
+model Bookmark {
+  id        String  @id @default(cuid())
+  userId    String
+  listingId String
+  user      User    @relation(fields: [userId], references: [id])
+  listing   Listing @relation(fields: [listingId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, listingId])
 }

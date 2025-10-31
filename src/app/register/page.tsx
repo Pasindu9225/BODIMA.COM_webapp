@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useToast } from '@/hooks/use-toast';
 import { BordimaLogo } from '@/components/bordima-logo';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -12,8 +13,10 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { registerStudent, registerProviderRedirect } from '@/lib/actions';
 
 const registerSchema = z.object({
+  name: z.string().min(1, 'Name is required.'),
   email: z.string().email('Please enter a valid email address.'),
   password: z.string().min(8, 'Password must be at least 8 characters long.'),
   role: z.enum(['student', 'provider'], {
@@ -23,22 +26,46 @@ const registerSchema = z.object({
 
 export default function RegisterPage() {
   const router = useRouter();
+  const { toast } = useToast();
   const form = useForm<z.infer<typeof registerSchema>>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
+      name: '',
       email: '',
       password: '',
       role: 'student',
     },
   });
 
-  const onSubmit = (values: z.infer<typeof registerSchema>) => {
-    // Mock registration logic
-    console.log(values);
+  const onSubmit = async (values: z.infer<typeof registerSchema>) => {
     if (values.role === 'provider') {
+      // This is a temporary step. We redirect to the detailed provider form.
+      // A better UX might store this in localStorage or pass via query params.
       router.push('/provider/register');
-    } else {
-      router.push('/student/dashboard');
+      return;
+    }
+
+    try {
+      const result = await registerStudent(values);
+      if (result.success) {
+        toast({
+          title: 'Registration Successful!',
+          description: 'Please log in with your new account.',
+        });
+        router.push('/login');
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Registration Failed',
+          description: result.message,
+        });
+      }
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Uh oh!',
+        description: 'Something went wrong. Please try again.',
+      });
     }
   };
 
@@ -88,6 +115,19 @@ export default function RegisterPage() {
                 />
                 <FormField
                   control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Full Name</FormLabel>
+                      <FormControl>
+                        <Input placeholder="John Doe" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
                   name="email"
                   render={({ field }) => (
                     <FormItem>
@@ -112,8 +152,8 @@ export default function RegisterPage() {
                     </FormItem>
                   )}
                 />
-                <Button type="submit" className="w-full">
-                  Create Account
+                <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
+                  {form.formState.isSubmitting ? 'Creating Account...' : 'Create Account'}
                 </Button>
               </form>
             </Form>

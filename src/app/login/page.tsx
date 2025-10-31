@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { signIn } from 'next-auth/react';
+import { useToast } from '@/hooks/use-toast';
 import { BordimaLogo } from '@/components/bordima-logo';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -19,6 +21,7 @@ const loginSchema = z.object({
 
 export default function LoginPage() {
   const router = useRouter();
+  const { toast } = useToast();
   const form = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
@@ -27,16 +30,23 @@ export default function LoginPage() {
     },
   });
 
-  const onSubmit = (values: z.infer<typeof loginSchema>) => {
-    // Mock login logic
-    console.log(values);
-    // Redirect based on a mock user role
-    if (values.email.startsWith('admin@')) {
-      router.push('/admin/dashboard');
-    } else if (values.email.startsWith('provider@')) {
-      router.push('/provider/dashboard');
-    } else {
-      router.push('/student/dashboard');
+  const onSubmit = async (values: z.infer<typeof loginSchema>) => {
+    const result = await signIn('credentials', {
+      redirect: false,
+      email: values.email,
+      password: values.password,
+    });
+
+    if (result?.error) {
+      toast({
+        variant: 'destructive',
+        title: 'Login Failed',
+        description: 'Invalid email or password. Please try again.',
+      });
+    } else if (result?.ok) {
+      // Successful login, Next-Auth will handle redirection via middleware or callback settings.
+      // For now, we can manually push to a generic dashboard and let middleware sort it out.
+      router.push('/');
     }
   };
 
@@ -80,8 +90,8 @@ export default function LoginPage() {
                     </FormItem>
                   )}
                 />
-                <Button type="submit" className="w-full">
-                  Log In
+                <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
+                  {form.formState.isSubmitting ? 'Logging in...' : 'Log In'}
                 </Button>
               </form>
             </Form>
