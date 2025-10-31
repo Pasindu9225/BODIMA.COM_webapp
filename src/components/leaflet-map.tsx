@@ -5,8 +5,6 @@ import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { useEffect, useRef, memo } from 'react';
 import type { Listing, University, MarkerData } from '@/lib/types';
-import { AccommodationCard } from './accommodation-card';
-
 
 // Fix for default icon not showing in Next.js
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -30,10 +28,6 @@ const listingIcon = new L.Icon({
     iconAnchor: [17, 35],
     popupAnchor: [0, -35],
 });
-
-// These types are now imported from @/lib/types
-// type University = { ... };
-// type MarkerData = { ... };
 
 type LeafletMapProps = {
   center: [number, number];
@@ -59,7 +53,6 @@ const MapEvents = ({ onPopupClose }: { onPopupClose: () => void }) => {
   return null;
 };
 
-// Memoize the component to prevent re-renders from parent state changes
 const LeafletMap = memo(function LeafletMap({ 
   center, 
   zoom, 

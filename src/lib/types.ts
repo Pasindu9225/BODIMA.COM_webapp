@@ -1,13 +1,13 @@
 export type Listing = {
   id: string;
   title: string;
-  description: string;
+  description?: string;
   location: string;
   price: number;
-  roomType: 'single' | 'shared';
-  amenities: string[];
-  status: 'pending' | 'approved' | 'rejected';
-  providerId: string;
+  roomType?: 'single' | 'shared';
+  amenities?: string[];
+  status?: 'pending' | 'approved' | 'rejected';
+  providerId?: string;
   imageUrl?: string;
   imageHint?: string;
   lat: number;

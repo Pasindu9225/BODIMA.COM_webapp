@@ -1,23 +1,68 @@
 // src/app/search/page.tsx
 'use client';
+import { useState, useMemo } from 'react';
+import dynamic from 'next/dynamic';
 import { Header } from '@/components/header';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Search as SearchIcon } from 'lucide-react';
-
-// Mock data for demonstration purposes
-const mockListings = [
-  { id: 1, title: 'Cozy Room near University of Colombo', price: '15,000' },
-  { id: 2, title: 'Modern Apartment in Malabe', price: '25,000' },
-  { id: 3, title: 'Quiet Studio in Peradeniya', price: '20,000' },
-  { id: 4, title: 'Shared Room for Two, Nugegoda', price: '12,000' },
-  { id: 5, title: 'Annex with A/C, Moratuwa', price: '18,000' },
-  { id: 6, title: 'Upstairs Room with Balcony', price: '22,000' },
-];
+import { listings, universities } from '@/lib/data';
+import type { Listing, University, MarkerData } from '@/lib/types';
+import { AccommodationCard } from '@/components/accommodation-card';
 
 export default function SearchPage() {
+  const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
+  const [mapCenter, setMapCenter] = useState<[number, number]>([7.8731, 80.7718]); // Default center of Sri Lanka
+  const [mapZoom, setMapZoom] = useState(8);
+
+  const LeafletMap = useMemo(() => dynamic(
+    () => import('@/components/leaflet-map'),
+    { 
+      ssr: false,
+      loading: () => <div className="h-full w-full bg-muted animate-pulse" />
+    }
+  ), []);
+
+  const markers: MarkerData[] = [
+    ...universities.map(uni => ({
+      position: [uni.lat, uni.lng] as [number, number],
+      popupContent: <h3>{uni.name}</h3>,
+      item: uni,
+      type: 'university' as const,
+    })),
+    ...listings.map(listing => ({
+      position: [listing.lat, listing.lng] as [number, number],
+      popupContent: (
+        <div>
+          <h3>{listing.title}</h3>
+          <p>LKR {listing.price.toLocaleString()} / month</p>
+        </div>
+      ),
+      item: listing,
+      type: 'listing' as const,
+    })),
+  ];
+
+  const handleMarkerClick = (item: Listing | University) => {
+    if ('price' in item) { // It's a Listing
+      setSelectedListing(item);
+    }
+    setMapCenter([item.lat, item.lng]);
+    setMapZoom(15);
+  };
+  
+  const handleCardClick = (listing: Listing) => {
+    setSelectedListing(listing);
+    setMapCenter([listing.lat, listing.lng]);
+    setMapZoom(15);
+  };
+
+  const handlePopupClose = () => {
+    setSelectedListing(null);
+  };
+
   return (
     <div className="flex h-screen flex-col">
       <Header />
@@ -56,17 +101,20 @@ export default function SearchPage() {
 
               {/* Result List */}
               <div>
-                <h3 className="font-semibold">Results</h3>
-                <div className="mt-2 space-y-4">
-                  {mockListings.map((listing) => (
-                    <Card key={listing.id} className="cursor-pointer hover:shadow-md">
-                      <div className="p-4">
-                        <h4 className="font-semibold">{listing.title}</h4>
-                        <p className="text-sm text-muted-foreground">
-                          LKR {listing.price} / month
-                        </p>
-                      </div>
-                    </Card>
+                <h3 className="font-semibold">{listings.length} Results</h3>
+                <div className="mt-4 space-y-4">
+                  {listings.map((listing) => (
+                    <div key={listing.id} onClick={() => handleCardClick(listing)}>
+                      <Card className="cursor-pointer hover:shadow-md">
+                        <div className="p-4">
+                          <h4 className="font-semibold">{listing.title}</h4>
+                          <p className="text-sm text-primary">
+                            LKR {listing.price.toLocaleString()} / month
+                          </p>
+                          <p className="text-xs text-muted-foreground">{listing.location}</p>
+                        </div>
+                      </Card>
+                    </div>
                   ))}
                 </div>
               </div>
@@ -76,9 +124,14 @@ export default function SearchPage() {
 
         {/* Right Panel: Map */}
         <main className="hidden flex-1 bg-muted/30 md:block">
-          <div className="flex h-full items-center justify-center">
-            <p className="text-muted-foreground">Google Map Component</p>
-          </div>
+          <LeafletMap
+            center={mapCenter}
+            zoom={mapZoom}
+            markers={markers}
+            selectedListing={selectedListing}
+            onMarkerClick={handleMarkerClick}
+            onPopupClose={handlePopupClose}
+          />
         </main>
       </div>
     </div>
