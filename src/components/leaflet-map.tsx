@@ -4,7 +4,7 @@ import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 're
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { useEffect, useRef, memo } from 'react';
-import type { Listing } from '@/lib/types';
+import type { Listing, University, MarkerData } from '@/lib/types';
 import { AccommodationCard } from './accommodation-card';
 
 
@@ -31,18 +31,9 @@ const listingIcon = new L.Icon({
     popupAnchor: [0, -35],
 });
 
-type University = {
-  name: string;
-  lat: number;
-  lng: number;
-};
-
-type MarkerData = {
-    position: [number, number];
-    popupContent: React.ReactNode;
-    item: Listing | University;
-    type: 'university' | 'listing';
-};
+// These types are now imported from @/lib/types
+// type University = { ... };
+// type MarkerData = { ... };
 
 type LeafletMapProps = {
   center: [number, number];

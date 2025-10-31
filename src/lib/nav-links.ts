@@ -20,12 +20,8 @@ export const iconMap = {
   Map,
 };
 
-export const studentNavLinks: NavLink[] = [
-  { href: '/map', label: 'Map', iconName: 'Map' },
-  { href: '/student/recommendations', label: 'Recommendations', iconName: 'MessageSquareQuote' },
-  { href: '#', label: 'Profile', iconName: 'User' },
-  { href: '#', label: 'Help', iconName: 'LifeBuoy' },
-];
+// studentNavLinks is no longer needed as there is no student dashboard
+export const studentNavLinks: NavLink[] = [];
 
 export const providerNavLinks: NavLink[] = [
   { href: '/provider/dashboard', label: 'Dashboard', iconName: 'LayoutDashboard' },

@@ -81,18 +81,17 @@ export default function Home() {
     <div className="flex min-h-screen flex-col">
       <Header />
       <main className="flex-1">
-        <section className="relative w-full py-20 md:py-32 lg:py-40">
+        <section className="relative w-full bg-slate-900 py-20 md:py-32 lg:py-40">
            {heroImage && (
             <Image
               src={heroImage.imageUrl}
               alt="Background image of a cozy living space"
               fill
-              className="object-cover object-center"
+              className="object-cover object-center opacity-30"
               priority
               data-ai-hint={heroImage.imageHint}
             />
           )}
-          <div className="absolute inset-0 bg-primary/80" />
           <div className="container relative z-10 mx-auto px-4 text-center text-primary-foreground">
             <h1 className="font-headline text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl lg:text-7xl">
               Find Your Home Away From Home
@@ -100,13 +99,13 @@ export default function Home() {
             <p className="mx-auto mt-6 max-w-2xl text-lg md:text-xl">
               Discover the best boarding places for students across Sri Lanka. Safe, affordable, and close to your campus.
             </p>
-            <div className="mt-10 flex justify-center gap-4">
-              <Button asChild size="lg" variant="secondary">
-                <Link href="/map">
+            <div className="mt-10 flex flex-wrap justify-center gap-4">
+              <Button asChild size="lg">
+                <Link href="/search">
                   Find a Place <ArrowRight />
                 </Link>
               </Button>
-              <Button asChild size="lg" variant="outline" className="border-accent bg-transparent text-accent hover:bg-accent hover:text-white">
+              <Button asChild size="lg" variant="secondary">
                 <Link href="/provider/register">
                   Become a Provider
                 </Link>
@@ -131,7 +130,7 @@ export default function Home() {
           </div>
         </section>
         
-        <section id="testimonials" className="w-full py-12 md:py-24">
+        <section id="testimonials" className="w-full bg-muted/40 py-12 md:py-24">
           <div className="container mx-auto px-4">
             <div className="text-center">
               <h2 className="font-headline text-3xl font-bold tracking-tight sm:text-4xl">What Our Users Say</h2>
@@ -141,7 +140,7 @@ export default function Home() {
             </div>
             <div className="mt-12 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
               {testimonials.map((testimonial, index) => (
-                <Card key={index} className="flex flex-col">
+                <Card key={index} className="flex flex-col bg-background">
                   <CardContent className="flex-1 p-6">
                     <p className="text-foreground/80">"{testimonial.comment}"</p>
                   </CardContent>

@@ -11,7 +11,7 @@ export function BordimaLogo({ className, ...props }: React.ComponentProps<typeof
       )}
       {...props}
     >
-      Bordima
+      Bordima.lk
     </Link>
   );
 }

@@ -10,6 +10,8 @@ export type Listing = {
   providerId: string;
   imageUrl?: string;
   imageHint?: string;
+  lat: number;
+  lng: number;
 };
 
 export type Provider = {
@@ -20,4 +22,18 @@ export type Provider = {
   address: string;
   nic: string;
   status: 'pending' | 'approved' | 'rejected';
+};
+
+// These types should already be here
+export type University = {
+  name: string;
+  lat: number;
+  lng: number;
+};
+
+export type MarkerData = {
+  position: [number, number];
+  popupContent: React.ReactNode;
+  item: Listing | University;
+  type: 'university' | 'listing';
 };
