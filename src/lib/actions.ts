@@ -1,8 +1,8 @@
 'use server';
 
 import { z } from 'zod';
-import bcrypt from 'bcrypt';
-import prisma from '@/lib/prisma';
+import bcrypt from 'bcryptjs';
+import { prisma } from '@/lib/prisma';
 import { Role, UserStatus } from '@prisma/client';
 
 const SALT_ROUNDS = 10;
