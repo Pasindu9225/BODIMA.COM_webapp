@@ -44,9 +44,10 @@ export default function LoginPage() {
         description: 'Invalid email or password. Please try again.',
       });
     } else if (result?.ok) {
-      // Successful login, Next-Auth will handle redirection via middleware or callback settings.
-      // For now, we can manually push to a generic dashboard and let middleware sort it out.
+      // Successful login, Next-Auth middleware will handle redirection.
+      // We push to a neutral page and let the middleware sort out the user's role.
       router.push('/');
+      router.refresh(); // Force a refresh to ensure middleware runs and session is updated
     }
   };
 
