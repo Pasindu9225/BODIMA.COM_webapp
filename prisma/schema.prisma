@@ -1,29 +1,67 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
+// This block defines our database connection
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL") // Loads from the .env file
+}
 
+// This tells Prisma how to generate its code
 generator client {
   provider = "prisma-client-js"
 }
 
-datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+// ---------------------------------------------
+// ENUMS (Our custom types)
+// ---------------------------------------------
+enum Role {
+  ADMIN
+  PROVIDER
 }
 
-enum UserRole {
-  student
-  provider
-  admin
+enum UserStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }
 
-enum ApprovalStatus {
-  pending
-  approved
-  rejected
+enum ListingStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  DEACTIVATED
 }
 
-// Next-Auth specific models
+enum Gender {
+  MALE
+  FEMALE
+  ANY
+}
+
+// ---------------------------------------------
+// AUTH MODELS (Required by Next-Auth)
+// ---------------------------------------------
+
+// This is our CUSTOM User model, merged with Next-Auth
+model User {
+  id            String       @id @default(cuid())
+  name          String?
+  email         String?      @unique
+  emailVerified DateTime?
+  image         String?
+  password      String?      // We use this for our custom login
+  accounts      Account[]
+  sessions      Session[]
+
+  // --- OUR CUSTOM FIELDS ---
+  phone         String?
+  address       String?
+  role          Role         @default(PROVIDER)
+  status        UserStatus   @default(PENDING)
+  listings      Listing[]
+  
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+}
+
 model Account {
   id                String  @id @default(cuid())
   userId            String
@@ -51,23 +89,56 @@ model Session {
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String?   @unique
-  emailVerified DateTime?
-  image         String?
-  password      String?
-  accounts      Account[]
-  sessions      Session[]
-  role          UserRole  @default(student)
-  status        ApprovalStatus @default(pending)
-}
-
 model VerificationToken {
   identifier String
   token      String   @unique
   expires    DateTime
 
   @@unique([identifier, token])
+}
+
+// ---------------------------------------------
+// OUR APPLICATION MODELS
+// ---------------------------------------------
+
+model University {
+  id        String  @id @default(cuid())
+  name      String  @unique
+  latitude  Float
+  longitude Float
+}
+
+model Listing {
+  id            String        @id @default(cuid())
+  title         String
+  description   String        @db.Text
+  address       String
+  latitude      Float
+  longitude     Float
+  price         Decimal       @db.Decimal(10, 2)
+  gender        Gender        @default(ANY)
+  status        ListingStatus @default(PENDING)
+
+  provider   User   @relation(fields: [providerId], references: [id])
+  providerId String
+
+  images    ListingImage[]
+  amenities Amenity[]      @relation("AmenityToListing")
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ListingImage {
+  id        String  @id @default(cuid())
+  url       String
+  listing   Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  listingId String
+}
+
+model Amenity {
+  id       String    @id @default(cuid())
+  name     String    @unique
+  icon     String?
+  listings Listing[] @relation("AmenityToListing")
 }

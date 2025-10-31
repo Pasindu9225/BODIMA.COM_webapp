@@ -1,11 +1,10 @@
 import NextAuth from 'next-auth';
 import { PrismaAdapter } from '@auth/prisma-adapter';
 import CredentialsProvider from 'next-auth/providers/credentials';
-import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcrypt';
 import type { NextAuthConfig } from 'next-auth';
-
-const prisma = new PrismaClient();
+import prisma from '@/lib/prisma';
+import { Role, UserStatus } from '@prisma/client';
 
 export const authConfig: NextAuthConfig = {
   adapter: PrismaAdapter(prisma),
@@ -18,54 +17,65 @@ export const authConfig: NextAuthConfig = {
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
+          console.log('Missing credentials');
           return null;
         }
 
+        const email = credentials.email as string;
+        const password = credentials.password as string;
+
         const user = await prisma.user.findUnique({
-          where: { email: credentials.email as string },
+          where: { email: email },
         });
 
         if (!user || !user.password) {
+          console.log('No user found or user has no password');
           return null;
         }
 
-        const passwordsMatch = await bcrypt.compare(credentials.password as string, user.password);
+        const passwordsMatch = await bcrypt.compare(password, user.password);
 
         if (passwordsMatch) {
           // Return the user object, which will be encoded in the JWT
+          console.log('Passwords match, returning user:', user);
           return user;
         }
 
+        console.log('Passwords do not match');
         return null;
       },
     }),
   ],
   session: {
+    // Use JSON Web Tokens for session management
     strategy: 'jwt',
   },
   callbacks: {
+    // This callback is called whenever a JWT is created (i.e., at sign in).
     async jwt({ token, user }) {
       // When the user first signs in, the `user` object is available.
-      // We add the custom properties to the token.
+      // We add our custom properties to the token here.
       if (user) {
         token.id = user.id;
-        token.role = user.role;
-        token.status = user.status;
+        token.role = user.role as Role;
+        token.status = user.status as UserStatus;
       }
       return token;
     },
+    // This callback is called whenever a session is checked.
     async session({ session, token }) {
-      // The session callback receives the token, and we can use it
-      // to add the custom properties to the session object.
+      // The session callback receives the token from the `jwt` callback.
+      // We can use it to add our custom properties to the `session.user` object.
       if (session.user) {
         session.user.id = token.id as string;
-        session.user.role = token.role as 'student' | 'provider' | 'admin';
-        session.user.status = token.status as 'pending' | 'approved' | 'rejected';
+        session.user.role = token.role as Role;
+        session.user.status = token.status as UserStatus;
       }
       return session;
     },
   },
   pages: {
+    // Redirect users to our custom login page
     signIn: '/login',
   }
 };
