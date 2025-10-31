@@ -1,9 +1,10 @@
 'use server';
 
 import { z } from 'zod';
-import bcrypt from 'bcryptjs';
+import bcryptjs from 'bcryptjs';
 import { prisma } from '@/lib/prisma';
 import { Role, UserStatus } from '@prisma/client';
+import { revalidatePath } from 'next/cache';
 
 const SALT_ROUNDS = 10;
 
@@ -55,7 +56,7 @@ export async function registerStudent(
       return { success: false, message: 'An account with this email already exists.' };
     }
 
-    const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
+    const hashedPassword = await bcryptjs.hash(password, SALT_ROUNDS);
 
     await prisma.user.create({
       data: {
@@ -110,7 +111,7 @@ export async function registerProvider(
         throw new Error('An account with this email already exists.');
       }
 
-      const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
+      const hashedPassword = await bcryptjs.hash(password, SALT_ROUNDS);
 
       const newUser = await tx.user.create({
         data: {
@@ -153,4 +154,42 @@ export async function registerProviderRedirect() {
   // This function is mostly a placeholder for the form action.
   // The client-side router handles the redirect.
   return { success: true, message: 'Redirecting to provider details form.' };
+}
+
+/**
+ * Approves a provider's registration.
+ * @param userId - The ID of the user to approve.
+ */
+export async function approveProvider(userId: string) {
+  try {
+    await prisma.user.update({
+      where: { id: userId },
+      data: { status: UserStatus.APPROVED },
+    });
+    revalidatePath('/admin/dashboard'); // Refresh the data on the dashboard
+    return { success: true, message: 'Provider approved.' };
+  } catch (error) {
+    console.error('Error approving provider:', error);
+    return { success: false, message: 'Failed to approve provider.' };
+  }
+}
+
+/**
+ * Rejects a provider's registration, deleting the user and provider profile.
+ * @param userId - The ID of the user to reject.
+ */
+export async function rejectProvider(userId: string) {
+  try {
+    // Use a transaction to ensure both are deleted
+    await prisma.$transaction(async (tx) => {
+      // The schema is set up with cascading deletes,
+      // so deleting the user will also delete the provider profile.
+      await tx.user.delete({ where: { id: userId } });
+    });
+    revalidatePath('/admin/dashboard'); // Refresh the data on the dashboard
+    return { success: true, message: 'Provider rejected and deleted.' };
+  } catch (error) {
+    console.error('Error rejecting provider:', error);
+    return { success: false, message: 'Failed to reject provider.' };
+  }
 }

@@ -1,20 +1,36 @@
+// src/app/admin/dashboard/page.tsx
+import { prisma } from '@/lib/prisma';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ProviderActions } from './provider-actions';
 
-const pendingProviders = [
-    { id: 'P001', name: 'Kamal Real Estate', contact: 'Kamal Perera', date: '2023-10-26' },
-    { id: 'P002', name: 'Nimali Hostels', contact: 'Nimali Silva', date: '2023-10-25' },
+const pendingListings: any[] = [
+    // { id: 'LST003', provider: 'Sunil Properties', title: 'Annex with Kitchenette', date: '2023-10-27' },
+    // { id: 'LST005', provider: 'City Apartments', title: 'Luxury Studio', date: '2023-10-26' },
 ];
 
-const pendingListings = [
-    { id: 'LST003', provider: 'Sunil Properties', title: 'Annex with Kitchenette', date: '2023-10-27' },
-    { id: 'LST005', provider: 'City Apartments', title: 'Luxury Studio', date: '2023-10-26' },
-];
+async function getPendingProviders() {
+    const providers = await prisma.user.findMany({
+        where: {
+            role: 'PROVIDER',
+            status: 'PENDING',
+        },
+        include: {
+            providerProfile: true, // Include the related provider profile
+        },
+        orderBy: {
+            createdAt: 'desc',
+        },
+    });
+    return providers;
+}
 
-export default function AdminDashboard() {
+
+export default async function AdminDashboard() {
+  const pendingProviders = await getPendingProviders();
+
   return (
     <div className="space-y-6">
       <div>
@@ -47,56 +63,41 @@ export default function AdminDashboard() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {pendingProviders.map((provider) => (
-                                <TableRow key={provider.id}>
-                                    <TableCell className="font-medium">{provider.name}</TableCell>
-                                    <TableCell>{provider.contact}</TableCell>
-                                    <TableCell>{provider.date}</TableCell>
-                                    <TableCell className="text-right space-x-2">
-                                        <Button variant="outline" size="sm">View</Button>
-                                        <Button size="sm">Approve</Button>
-                                        <Button variant="destructive" size="sm">Reject</Button>
+                             {pendingProviders.length === 0 ? (
+                                <TableRow>
+                                    <TableCell colSpan={4} className="h-24 text-center">
+                                    No pending approvals.
                                     </TableCell>
                                 </TableRow>
-                            ))}
+                                ) : (
+                                    pendingProviders.map((user) => (
+                                        <TableRow key={user.id}>
+                                            <TableCell className="font-medium">{user.providerProfile?.name ?? 'N/A'}</TableCell>
+                                            <TableCell>{user.name}</TableCell>
+                                            <TableCell>{user.createdAt.toLocaleDateString()}</TableCell>
+                                            <TableCell className="text-right space-x-2">
+                                                <ProviderActions userId={user.id} />
+                                            </TableCell>
+                                        </TableRow>
+                                    ))
+                                )}
                         </TableBody>
                     </Table>
                 </CardContent>
             </Card>
         </TabsContent>
         <TabsContent value="listings">
-            <Card>
+             <Card>
                 <CardHeader>
                     <CardTitle>Pending Listing Submissions</CardTitle>
-                    <CardDescription>Review the details and approve or reject new listings.</CardDescription>
+                    <CardDescription>This section is under construction.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Listing Title</TableHead>
-                                <TableHead>Provider</TableHead>
-                                <TableHead>Submission Date</TableHead>
-                                <TableHead className="text-right">Actions</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {pendingListings.map((listing) => (
-                                <TableRow key={listing.id}>
-                                    <TableCell className="font-medium">{listing.title}</TableCell>
-                                    <TableCell>{listing.provider}</TableCell>
-                                    <TableCell>{listing.date}</TableCell>
-                                    <TableCell className="text-right space-x-2">
-                                        <Button variant="outline" size="sm">View</Button>
-                                        <Button size="sm">Approve</Button>
-                                        <Button variant="destructive" size="sm">Reject</Button>
-                                    </TableCell>
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
+                    <div className="flex items-center justify-center h-48">
+                        <p className="text-muted-foreground">Listing approvals will be managed here soon.</p>
+                    </div>
                 </CardContent>
-            </Card>
+             </Card>
         </TabsContent>
       </Tabs>
     </div>
