@@ -8,7 +8,6 @@ import {
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
-  SidebarInset,
 } from '@/components/ui/sidebar';
 import { BordimaLogo } from './bordima-logo';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
@@ -19,16 +18,20 @@ import type { NavLink } from '@/lib/nav-links';
 import { iconMap } from '@/lib/nav-links';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { signOut } from 'next-auth/react';
 
 type DashboardLayoutProps = {
   children: React.ReactNode;
   navLinks: NavLink[];
-  user: { name: string; email: string; avatar?: string };
+  user: { name?: string | null; email?: string | null; image?: string | null };
 };
 
 export function DashboardLayout({ children, navLinks, user }: DashboardLayoutProps) {
   const pathname = usePathname();
   
+  const userName = user?.name ?? 'User';
+  const userEmail = user?.email ?? 'No email';
+
   return (
     <SidebarProvider>
       <Sidebar>
@@ -58,12 +61,12 @@ export function DashboardLayout({ children, navLinks, user }: DashboardLayoutPro
               <Button variant="ghost" className="h-14 w-full justify-start px-2">
                  <div className="flex items-center gap-3">
                   <Avatar className="h-9 w-9">
-                    {user.avatar && <AvatarImage src={user.avatar} />}
-                    <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+                    {user?.image && <AvatarImage src={user.image} />}
+                    <AvatarFallback>{userName.charAt(0)}</AvatarFallback>
                   </Avatar>
                   <div className="hidden text-left group-data-[collapsible=icon]:hidden">
-                    <p className="font-semibold">{user.name}</p>
-                    <p className="text-xs text-sidebar-foreground/70">{user.email}</p>
+                    <p className="font-semibold">{userName}</p>
+                    <p className="text-xs text-sidebar-foreground/70">{userEmail}</p>
                   </div>
                  </div>
               </Button>
@@ -71,22 +74,20 @@ export function DashboardLayout({ children, navLinks, user }: DashboardLayoutPro
             <DropdownMenuContent className="w-56" align="end" forceMount>
               <DropdownMenuLabel className="font-normal">
                 <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium leading-none">{user.name}</p>
-                  <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
+                  <p className="text-sm font-medium leading-none">{userName}</p>
+                  <p className="text-xs leading-none text-muted-foreground">{userEmail}</p>
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>
+              <DropdownMenuItem onClick={() => signOut({ callbackUrl: '/login' })}>
                 <LogOut className="mr-2 h-4 w-4" />
-                 <Link href="/">Log out</Link>
+                <span>Log out</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </SidebarFooter>
       </Sidebar>
-      <SidebarInset>
-        <main className="flex-1 p-6">{children}</main>
-      </SidebarInset>
+      <main className="flex-1 p-6">{children}</main>
     </SidebarProvider>
   );
 }
