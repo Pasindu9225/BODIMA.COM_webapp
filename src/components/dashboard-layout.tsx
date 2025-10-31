@@ -8,19 +8,17 @@ import {
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
-  SidebarTrigger,
   SidebarInset,
 } from '@/components/ui/sidebar';
 import { BordimaLogo } from './bordima-logo';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Button } from './ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from './ui/dropdown-menu';
-import { LogOut, Search } from 'lucide-react';
+import { LogOut } from 'lucide-react';
 import type { NavLink } from '@/lib/nav-links';
 import { iconMap } from '@/lib/nav-links';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Input } from './ui/input';
 
 type DashboardLayoutProps = {
   children: React.ReactNode;
@@ -43,7 +41,7 @@ export function DashboardLayout({ children, navLinks, user }: DashboardLayoutPro
               const Icon = iconMap[link.iconName];
               return (
                 <SidebarMenuItem key={link.href}>
-                  <Link href={link.href} passHref legacyBehavior>
+                  <Link href={link.href}>
                     <SidebarMenuButton isActive={pathname === link.href} tooltip={link.label}>
                       <Icon />
                       <span>{link.label}</span>
@@ -87,7 +85,7 @@ export function DashboardLayout({ children, navLinks, user }: DashboardLayoutPro
         </SidebarFooter>
       </Sidebar>
       <SidebarInset>
-        <main className="flex-1">{children}</main>
+        <main className="flex-1 p-6">{children}</main>
       </SidebarInset>
     </SidebarProvider>
   );
