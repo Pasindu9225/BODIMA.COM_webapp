@@ -24,6 +24,10 @@ const providerSchema = z.object({
   phone: z.string().min(10, 'A valid phone number is required.'),
   address: z.string().min(1, 'Address is required.'),
   nic: z.string().min(10, 'NIC number is required.'),
+  propertyInfo: z.string().optional(),
+  agreedToTerms: z.literal<boolean>(true, {
+    errorMap: () => ({ message: 'You must agree to the terms and conditions' }),
+  }),
 });
 
 type FormState = {
@@ -86,9 +90,11 @@ export async function registerProvider(
   const validatedFields = providerSchema.safeParse(values);
 
   if (!validatedFields.success) {
+    // Construct a more detailed error message from validation issues
+    const errorMessages = validatedFields.error.errors.map(e => e.message).join(', ');
     return {
       success: false,
-      message: 'Invalid form data.',
+      message: `Invalid form data: ${errorMessages}`,
     };
   }
 
@@ -100,6 +106,7 @@ export async function registerProvider(
     phone,
     address,
     nic,
+    propertyInfo,
   } = validatedFields.data;
 
   try {
@@ -123,13 +130,14 @@ export async function registerProvider(
         },
       });
 
-      await tx.provider.create({
+      await tx.providerProfile.create({
         data: {
           userId: newUser.id,
           name: providerName,
           phone,
           address,
           nic,
+          propertyInfo: propertyInfo,
         },
       });
 
@@ -145,6 +153,7 @@ export async function registerProvider(
     return { success: false, message: 'Database error. Please try again.' };
   }
 }
+
 
 /**
  * A dummy action for the initial registration form to redirect to the full provider form.

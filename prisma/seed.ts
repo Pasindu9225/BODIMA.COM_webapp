@@ -1,6 +1,6 @@
 // Import the necessary tools
 import { PrismaClient, Role, UserStatus } from '@prisma/client';
-import * as bcrypt from 'bcrypt';
+import * as bcrypt from 'bcryptjs';
 
 // Initialize Prisma Client
 const prisma = new PrismaClient();
@@ -10,10 +10,9 @@ const SALT_ROUNDS = 10;
 
 // The main function that will run
 async function main() {
-  console.log('Seeding database...');
+  console.log('Seeding database with new schema...');
 
   // --- YOUR ADMIN ACCOUNT ---
-  // !!! CHANGE THESE VALUES !!!
   const adminEmail = 'admin@bordima.lk';
   const adminPassword = 'your-very-strong-password-123';
   // --------------------------
@@ -21,29 +20,28 @@ async function main() {
   // Hash the password
   const hashedPassword = await bcrypt.hash(adminPassword, SALT_ROUNDS);
 
-  // Check if the admin user already exists
-  const existingAdmin = await prisma.user.findUnique({
+  // Use "upsert" to find and update/create the admin
+  await prisma.user.upsert({
     where: { email: adminEmail },
+    // Update the existing admin user if found
+    update: {
+      password: hashedPassword,
+      role: Role.ADMIN,
+      status: UserStatus.APPROVED,
+    },
+    // ...or create them if they don't exist
+    create: {
+      name: 'Admin',
+      email: adminEmail,
+      password: hashedPassword,
+      role: Role.ADMIN,
+      status: UserStatus.APPROVED, // Explicitly set status
+    },
   });
+  console.log('✅ Admin user created/updated successfully!');
 
-  if (existingAdmin) {
-    console.log('Admin user already exists. Skipping...');
-  } else {
-    // Create the new admin user
-    await prisma.user.create({
-      data: {
-        name: 'Admin',
-        email: adminEmail,
-        password: hashedPassword,
-        role: Role.ADMIN,         // This sets them as an Admin
-        status: UserStatus.APPROVED, // This makes them 'Approved'
-      },
-    });
-    console.log('✅ Admin user created successfully!');
-  }
-  
-  // Add any other seed data here (like Universities or Amenities)
-  // For example:
+  // --- Seed amenities ---
+  // (This part is compatible with your new schema)
   await prisma.amenity.upsert({
     where: { name: 'Wi-Fi' },
     update: {},
@@ -61,8 +59,7 @@ async function main() {
     update: {},
     create: { name: 'A/C', icon: 'ac' },
   });
-  
-  console.log('✅ Basic amenities created!');
+  console.log('✅ Basic amenities created/updated!');
 
   console.log('Seeding finished.');
 }
