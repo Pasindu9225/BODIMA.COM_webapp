@@ -13,7 +13,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { registerStudent, registerProviderRedirect } from '@/lib/actions';
+import { registerStudent } from '@/lib/actions';
 
 const registerSchema = z.object({
   name: z.string().min(1, 'Name is required.'),
@@ -39,9 +39,7 @@ export default function RegisterPage() {
 
   const onSubmit = async (values: z.infer<typeof registerSchema>) => {
     if (values.role === 'provider') {
-      // This is a temporary step. We redirect to the detailed provider form.
-      // A better UX might store this in localStorage or pass via query params.
-      router.push('/provider/register');
+      router.push('/register/provider');
       return;
     }
 

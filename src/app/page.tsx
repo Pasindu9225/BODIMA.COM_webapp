@@ -106,7 +106,7 @@ export default function Home() {
                 </Link>
               </Button>
               <Button asChild size="lg" variant="secondary">
-                <Link href="/provider/register">
+                <Link href="/register/provider">
                   Become a Provider
                 </Link>
               </Button>

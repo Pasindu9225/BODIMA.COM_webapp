@@ -82,7 +82,7 @@ export function Header() {
           ) : (
             <>
                 <Button asChild variant="ghost">
-                    <Link href="/provider/register">Become a Provider</Link>
+                    <Link href="/register/provider">Become a Provider</Link>
                 </Button>
                 <Button asChild>
                     <Link href="/login">Login</Link>

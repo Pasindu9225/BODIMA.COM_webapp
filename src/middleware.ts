@@ -9,12 +9,11 @@ export async function middleware(req: NextRequest) {
 
   const isProviderPath = pathname.startsWith('/provider');
   const isAdminPath = pathname.startsWith('/admin');
-  const isAuthPage = pathname.startsWith('/login') || pathname === '/register';
+  const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/register');
   
-  // If user is not authenticated, only allow access to public pages, login, and registration forms.
+  // If user is not authenticated, only allow access to public pages and auth forms.
   if (!token) {
-    // Protect admin and all provider routes except the registration page.
-    if (isAdminPath || (isProviderPath && pathname !== '/provider/register')) {
+    if (isAdminPath || isProviderPath) {
       const url = req.nextUrl.clone();
       url.pathname = '/login';
       url.searchParams.set('callbackUrl', pathname);
@@ -27,7 +26,7 @@ export async function middleware(req: NextRequest) {
   const { role, status } = token;
 
   // Redirect away from auth pages if logged in
-  if (isAuthPage || pathname === '/provider/register') {
+  if (isAuthPage) {
      const url = req.nextUrl.clone();
      if (role === 'ADMIN') {
         url.pathname = '/admin/dashboard';
@@ -63,8 +62,8 @@ export async function middleware(req: NextRequest) {
 
   // Handle admin-specific logic
   if (role === 'ADMIN') {
-    // If admin is trying to access provider pages (except the registration form for viewing), redirect them
-    if (isProviderPath && pathname !== '/provider/register') { 
+    // If admin is trying to access provider pages, redirect them
+    if (isProviderPath) { 
       const url = req.nextUrl.clone();
       url.pathname = '/admin/dashboard';
       return NextResponse.redirect(url);
@@ -87,7 +86,7 @@ export async function middleware(req: NextRequest) {
 export const config = {
   matcher: [
     '/login',
-    '/register', 
+    '/register/:path*', // Match base register and new provider register page
     '/provider/:path*',
     '/admin/:path*',
   ],
