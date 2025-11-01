@@ -9,11 +9,12 @@ export async function middleware(req: NextRequest) {
 
   const isProviderPath = pathname.startsWith('/provider');
   const isAdminPath = pathname.startsWith('/admin');
-  const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/register');
+  const isAuthPage = pathname.startsWith('/login') || pathname === '/register';
   
-  // If user is not authenticated
+  // If user is not authenticated, only allow access to public pages, login, and registration forms.
   if (!token) {
-    if ((isProviderPath && pathname !== '/provider/register') || isAdminPath) {
+    // Protect admin and all provider routes except the registration page.
+    if (isAdminPath || (isProviderPath && pathname !== '/provider/register')) {
       const url = req.nextUrl.clone();
       url.pathname = '/login';
       url.searchParams.set('callbackUrl', pathname);
@@ -26,7 +27,7 @@ export async function middleware(req: NextRequest) {
   const { role, status } = token;
 
   // Redirect away from auth pages if logged in
-  if (isAuthPage) {
+  if (isAuthPage || pathname === '/provider/register') {
      const url = req.nextUrl.clone();
      if (role === 'ADMIN') {
         url.pathname = '/admin/dashboard';
@@ -62,8 +63,8 @@ export async function middleware(req: NextRequest) {
 
   // Handle admin-specific logic
   if (role === 'ADMIN') {
-    // If admin is trying to access provider pages, redirect them
-    if (isProviderPath && pathname !== '/provider/register') { // allow access to provider registration form
+    // If admin is trying to access provider pages (except the registration form for viewing), redirect them
+    if (isProviderPath && pathname !== '/provider/register') { 
       const url = req.nextUrl.clone();
       url.pathname = '/admin/dashboard';
       return NextResponse.redirect(url);
@@ -73,7 +74,7 @@ export async function middleware(req: NextRequest) {
   // Handle student-specific logic (or lack thereof)
   if (role === 'STUDENT') {
      // If a student tries to access admin or provider pages, redirect to home
-    if (isAdminPath || (isProviderPath && pathname !== '/provider/register')) {
+    if (isAdminPath || isProviderPath) {
       const url = req.nextUrl.clone();
       url.pathname = '/';
       return NextResponse.redirect(url);
