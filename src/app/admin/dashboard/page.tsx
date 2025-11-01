@@ -19,7 +19,7 @@ async function getPendingProviders(): Promise<ProviderWithProfile[]> {
             status: 'PENDING',
         },
         include: {
-            provider: true, // Corrected from providerProfile
+            providerProfile: true, // Corrected relation name
         },
         orderBy: {
             createdAt: 'desc',
@@ -73,7 +73,7 @@ export default async function AdminDashboard() {
                                 ) : (
                                     pendingProviders.map((user) => (
                                         <TableRow key={user.id}>
-                                            <TableCell className="font-medium">{user.provider?.name ?? 'N/A'}</TableCell>
+                                            <TableCell className="font-medium">{user.providerProfile?.name ?? 'N/A'}</TableCell>
                                             <TableCell>{user.name}</TableCell>
                                             <TableCell>{user.createdAt.toLocaleDateString()}</TableCell>
                                             <TableCell className="text-right space-x-2">

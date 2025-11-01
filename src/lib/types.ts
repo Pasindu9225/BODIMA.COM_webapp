@@ -41,5 +41,5 @@ export type MarkerData = {
 };
 
 export type ProviderWithProfile = User & {
-  provider: ProviderModel | null;
+  providerProfile: ProviderModel | null;
 };
