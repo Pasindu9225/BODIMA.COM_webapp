@@ -1,6 +1,6 @@
 import type { NextAuthConfig } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
-import * as bcryptjs from 'bcryptjs';
+import bcryptjs from 'bcryptjs';
 import { prisma } from '@/lib/prisma';
 import { Role, UserStatus } from '@prisma/client';
 
