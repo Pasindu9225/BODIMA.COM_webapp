@@ -13,7 +13,7 @@ export async function middleware(req: NextRequest) {
   
   // If user is not authenticated
   if (!token) {
-    if (isProviderPath || isAdminPath) {
+    if ((isProviderPath && pathname !== '/provider/register') || isAdminPath) {
       const url = req.nextUrl.clone();
       url.pathname = '/login';
       url.searchParams.set('callbackUrl', pathname);
@@ -63,7 +63,7 @@ export async function middleware(req: NextRequest) {
   // Handle admin-specific logic
   if (role === 'ADMIN') {
     // If admin is trying to access provider pages, redirect them
-    if (isProviderPath) {
+    if (isProviderPath && pathname !== '/provider/register') { // allow access to provider registration form
       const url = req.nextUrl.clone();
       url.pathname = '/admin/dashboard';
       return NextResponse.redirect(url);
@@ -73,7 +73,7 @@ export async function middleware(req: NextRequest) {
   // Handle student-specific logic (or lack thereof)
   if (role === 'STUDENT') {
      // If a student tries to access admin or provider pages, redirect to home
-    if (isAdminPath || isProviderPath) {
+    if (isAdminPath || (isProviderPath && pathname !== '/provider/register')) {
       const url = req.nextUrl.clone();
       url.pathname = '/';
       return NextResponse.redirect(url);
@@ -86,8 +86,7 @@ export async function middleware(req: NextRequest) {
 export const config = {
   matcher: [
     '/login',
-    // We remove /register here to prevent ChunkLoadError
-    // '/register', 
+    '/register', 
     '/provider/:path*',
     '/admin/:path*',
   ],
