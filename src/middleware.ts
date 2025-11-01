@@ -86,7 +86,8 @@ export async function middleware(req: NextRequest) {
 export const config = {
   matcher: [
     '/login',
-    '/register',
+    // We remove /register here to prevent ChunkLoadError
+    // '/register', 
     '/provider/:path*',
     '/admin/:path*',
   ],
