@@ -1,7 +1,7 @@
 'use client';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -21,6 +21,8 @@ const loginSchema = z.object({
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams.get('callbackUrl') || '/';
   const { toast } = useToast();
   const form = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
@@ -31,23 +33,41 @@ export default function LoginPage() {
   });
 
   const onSubmit = async (values: z.infer<typeof loginSchema>) => {
-    const result = await signIn('credentials', {
-      redirect: false,
-      email: values.email,
-      password: values.password,
-    });
-
-    if (result?.error) {
-      toast({
-        variant: 'destructive',
-        title: 'Login Failed',
-        description: 'Invalid email or password. Please try again.',
+    try {
+      const result = await signIn('credentials', {
+        redirect: false,
+        email: values.email,
+        password: values.password,
       });
-    } else if (result?.ok) {
-      // Successful login, Next-Auth middleware will handle redirection.
-      // We push to a neutral page and let the middleware sort out the user's role.
-      router.push('/');
-      router.refresh(); // Force a refresh to ensure middleware runs and session is updated
+
+      if (result?.error) {
+        // The error 'CredentialsSignin' is a specific error code from Next-Auth.
+        if (result.error === 'CredentialsSignin') {
+            toast({
+                variant: 'destructive',
+                title: 'Login Failed',
+                description: 'Invalid email or password. Please try again.',
+            });
+        } else {
+             toast({
+                variant: 'destructive',
+                title: 'Login Failed',
+                description: 'An unexpected error occurred. Please try again.',
+            });
+        }
+      } else if (result?.ok) {
+        // Successful login, Next-Auth middleware will handle redirection.
+        // We push to the callbackUrl and let the middleware sort out the user's role.
+        router.push(callbackUrl);
+        router.refresh(); // Force a refresh to ensure middleware runs and session is updated
+      }
+    } catch(error) {
+        console.error("Login submission error", error);
+        toast({
+            variant: 'destructive',
+            title: 'Uh oh!',
+            description: 'Something went wrong during login.',
+        });
     }
   };
 
