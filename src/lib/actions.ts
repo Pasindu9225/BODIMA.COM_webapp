@@ -130,14 +130,13 @@ export async function registerProvider(
         },
       });
 
-      await tx.providerProfile.create({
+      await tx.provider.create({
         data: {
           userId: newUser.id,
           name: providerName,
           phone,
           address,
           nic,
-          propertyInfo: propertyInfo,
         },
       });
 
