@@ -1,3 +1,5 @@
+import type { User, Provider as ProviderModel } from '@prisma/client';
+
 export type Listing = {
   id: string;
   title: string;
@@ -36,4 +38,8 @@ export type MarkerData = {
   popupContent: React.ReactNode;
   item: Listing | University;
   type: 'university' | 'listing';
+};
+
+export type ProviderWithProfile = User & {
+  provider: ProviderModel | null;
 };

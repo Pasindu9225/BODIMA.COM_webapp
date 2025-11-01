@@ -5,20 +5,21 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ProviderActions } from './provider-actions';
+import type { ProviderWithProfile } from '@/lib/types';
 
 const pendingListings: any[] = [
     // { id: 'LST003', provider: 'Sunil Properties', title: 'Annex with Kitchenette', date: '2023-10-27' },
     // { id: 'LST005', provider: 'City Apartments', title: 'Luxury Studio', date: '2023-10-26' },
 ];
 
-async function getPendingProviders() {
+async function getPendingProviders(): Promise<ProviderWithProfile[]> {
     const providers = await prisma.user.findMany({
         where: {
             role: 'PROVIDER',
             status: 'PENDING',
         },
         include: {
-            providerProfile: true, // Include the related provider profile
+            provider: true, // Corrected from providerProfile
         },
         orderBy: {
             createdAt: 'desc',
@@ -72,7 +73,7 @@ export default async function AdminDashboard() {
                                 ) : (
                                     pendingProviders.map((user) => (
                                         <TableRow key={user.id}>
-                                            <TableCell className="font-medium">{user.providerProfile?.name ?? 'N/A'}</TableCell>
+                                            <TableCell className="font-medium">{user.provider?.name ?? 'N/A'}</TableCell>
                                             <TableCell>{user.name}</TableCell>
                                             <TableCell>{user.createdAt.toLocaleDateString()}</TableCell>
                                             <TableCell className="text-right space-x-2">
