@@ -1,32 +1,33 @@
-'use server';
+"use server";
 
-import { z } from 'zod';
-import bcryptjs from 'bcryptjs';
-import { prisma } from '@/lib/prisma';
-import { Role, UserStatus } from '@prisma/client';
-import { revalidatePath } from 'next/cache';
+import { z } from "zod";
+import * as bcryptjs from "bcryptjs";
+import { prisma } from "@/lib/prisma";
+import { Role, UserStatus, ListingStatus } from "@prisma/client";
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 
 const SALT_ROUNDS = 10;
 
 // Schema for student registration
 const studentSchema = z.object({
-  name: z.string().min(1, 'Name is required.'),
-  email: z.string().email('Please enter a valid email address.'),
-  password: z.string().min(8, 'Password must be at least 8 characters long.'),
+  name: z.string().min(1, "Name is required."),
+  email: z.string().email("Please enter a valid email address."),
+  password: z.string().min(8, "Password must be at least 8 characters long."),
 });
 
 // Schema for provider registration
 const providerSchema = z.object({
-  providerName: z.string().min(1, 'Provider name is required.'),
-  contactName: z.string().min(1, 'Contact person name is required.'),
-  email: z.string().email('A valid email address is required.'),
-  password: z.string().min(8, 'Password must be at least 8 characters.'),
-  phone: z.string().min(10, 'A valid phone number is required.'),
-  address: z.string().min(1, 'Address is required.'),
-  nic: z.string().min(10, 'NIC number is required.'),
+  providerName: z.string().min(1, "Provider name is required."),
+  contactName: z.string().min(1, "Contact person name is required."),
+  email: z.string().email("A valid email address is required."),
+  password: z.string().min(8, "Password must be at least 8 characters."),
+  phone: z.string().min(10, "A valid phone number is required."),
+  address: z.string().min(1, "Address is required."),
+  nic: z.string().min(10, "NIC number is required."),
   propertyInfo: z.string().optional(),
   agreedToTerms: z.literal<boolean>(true, {
-    errorMap: () => ({ message: 'You must agree to the terms and conditions' }),
+    errorMap: () => ({ message: "You must agree to the terms and conditions" }),
   }),
 });
 
@@ -37,8 +38,6 @@ type FormState = {
 
 /**
  * Registers a new student user.
- * @param values - The form values for student registration.
- * @returns A promise that resolves to the form state.
  */
 export async function registerStudent(
   values: z.infer<typeof studentSchema>
@@ -48,7 +47,7 @@ export async function registerStudent(
   if (!validatedFields.success) {
     return {
       success: false,
-      message: 'Invalid form data.',
+      message: "Invalid form data.",
     };
   }
 
@@ -57,7 +56,10 @@ export async function registerStudent(
   try {
     const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) {
-      return { success: false, message: 'An account with this email already exists.' };
+      return {
+        success: false,
+        message: "An account with this email already exists.",
+      };
     }
 
     const hashedPassword = await bcryptjs.hash(password, SALT_ROUNDS);
@@ -72,17 +74,15 @@ export async function registerStudent(
       },
     });
 
-    return { success: true, message: 'Student registered successfully.' };
+    return { success: true, message: "Student registered successfully." };
   } catch (error) {
-    console.error('Student registration error:', error);
-    return { success: false, message: 'Database error. Please try again.' };
+    console.error("Student registration error:", error);
+    return { success: false, message: "Database error. Please try again." };
   }
 }
 
 /**
  * Registers a new provider user and their profile.
- * @param values - The form values for provider registration.
- * @returns A promise that resolves to the form state.
  */
 export async function registerProvider(
   values: z.infer<typeof providerSchema>
@@ -90,43 +90,34 @@ export async function registerProvider(
   const validatedFields = providerSchema.safeParse(values);
 
   if (!validatedFields.success) {
-    // Construct a more detailed error message from validation issues
-    const errorMessages = validatedFields.error.errors.map(e => e.message).join(', ');
+    const errorMessages = validatedFields.error.errors
+      .map((e) => e.message)
+      .join(", ");
     return {
       success: false,
       message: `Invalid form data: ${errorMessages}`,
     };
   }
 
-  const {
-    providerName,
-    contactName,
-    email,
-    password,
-    phone,
-    address,
-    nic,
-    propertyInfo,
-  } = validatedFields.data;
+  const { providerName, contactName, email, password, phone, address, nic } =
+    validatedFields.data;
 
   try {
-    // Use a transaction to ensure both User and Provider are created or neither
-    const result = await prisma.$transaction(async (tx) => {
+    await prisma.$transaction(async (tx) => {
       const existingUser = await tx.user.findUnique({ where: { email } });
       if (existingUser) {
-        // This will cause the transaction to roll back
-        throw new Error('An account with this email already exists.');
+        throw new Error("An account with this email already exists.");
       }
 
       const hashedPassword = await bcryptjs.hash(password, SALT_ROUNDS);
 
       const newUser = await tx.user.create({
         data: {
-          name: contactName, // Use contact name for the user's name
+          name: contactName,
           email,
           password: hashedPassword,
           role: Role.PROVIDER,
-          status: UserStatus.PENDING, // Providers must be approved by an admin
+          status: UserStatus.PENDING,
         },
       });
 
@@ -139,65 +130,149 @@ export async function registerProvider(
           nic,
         },
       });
-
-      return newUser;
     });
-
-    return { success: true, message: 'Provider registration submitted for approval.' };
   } catch (error: any) {
-    console.error('Provider registration error:', error);
-    if (error.message.includes('already exists')) {
-      return { success: false, message: error.message };
+    console.error("Provider registration error:", error);
+    if (error.code === "P2002" && error.meta?.target?.includes("nic")) {
+      return {
+        success: false,
+        message: "This NIC number is already registered.",
+      };
     }
-    return { success: false, message: 'Database error. Please try again.' };
+    if (error.message.includes("already exists")) {
+      return {
+        success: false,
+        message: "An account with this email already exists.",
+      };
+    }
+    return { success: false, message: "Database error. Please try again." };
   }
+
+  // If successful, redirect to the pending page
+  redirect("/provider/pending");
 }
 
-
 /**
- * A dummy action for the initial registration form to redirect to the full provider form.
- * In a real app, you might pass state between these pages.
+ * A dummy action for the initial registration form.
  */
 export async function registerProviderRedirect() {
-  // This function is mostly a placeholder for the form action.
-  // The client-side router handles the redirect.
-  return { success: true, message: 'Redirecting to provider details form.' };
+  return { success: true, message: "Redirecting to provider details form." };
 }
 
 /**
  * Approves a provider's registration.
- * @param userId - The ID of the user to approve.
  */
 export async function approveProvider(userId: string) {
   try {
-    await prisma.user.update({
-      where: { id: userId },
-      data: { status: UserStatus.APPROVED },
+    await prisma.$transaction(async (tx) => {
+      await tx.user.update({
+        where: { id: userId },
+        data: { status: UserStatus.APPROVED },
+      });
+      await tx.provider.update({
+        where: { userId: userId },
+        data: { isVerified: true },
+      });
     });
-    revalidatePath('/admin/dashboard'); // Refresh the data on the dashboard
-    return { success: true, message: 'Provider approved.' };
+
+    revalidatePath("/admin/dashboard");
+    revalidatePath("/admin/users");
+    return { success: true, message: "Provider approved." };
   } catch (error) {
-    console.error('Error approving provider:', error);
-    return { success: false, message: 'Failed to approve provider.' };
+    console.error("Error approving provider:", error);
+    return { success: false, message: "Failed to approve provider." };
   }
 }
 
 /**
- * Rejects a provider's registration, deleting the user and provider profile.
- * @param userId - The ID of the user to reject.
+ * Rejects a provider's registration.
  */
 export async function rejectProvider(userId: string) {
   try {
-    // Use a transaction to ensure both are deleted
     await prisma.$transaction(async (tx) => {
-      // The schema is set up with cascading deletes,
-      // so deleting the user will also delete the provider profile.
       await tx.user.delete({ where: { id: userId } });
     });
-    revalidatePath('/admin/dashboard'); // Refresh the data on the dashboard
-    return { success: true, message: 'Provider rejected and deleted.' };
+    revalidatePath("/admin/dashboard");
+    revalidatePath("/admin/users");
+    return { success: true, message: "Provider rejected and deleted." };
   } catch (error) {
-    console.error('Error rejecting provider:', error);
-    return { success: false, message: 'Failed to reject provider.' };
+    console.error("Error rejecting provider:", error);
+    return { success: false, message: "Failed to reject provider." };
+  }
+}
+
+/**
+ * Approves a property listing.
+ */
+export async function approveListing(listingId: string, formData: FormData) {
+  try {
+    await prisma.listing.update({
+      where: { id: listingId },
+      data: { status: ListingStatus.APPROVED },
+    });
+    revalidatePath("/admin/listings");
+  } catch (error) {
+    console.error("Error approving listing:", error);
+  }
+}
+
+/**
+ * Rejects a property listing.
+ */
+export async function rejectListing(listingId: string, formData: FormData) {
+  try {
+    await prisma.listing.update({
+      where: { id: listingId },
+      data: { status: ListingStatus.REJECTED },
+    });
+    revalidatePath("/admin/listings");
+  } catch (error) {
+    console.error("Error rejecting listing:", error);
+  }
+}
+
+/**
+ * Creates a new amenity.
+ */
+// --- FIX 1: Removed the return values ---
+export async function createAmenity(formData: FormData) {
+  const name = formData.get("name") as string;
+  const icon = formData.get("icon") as string;
+
+  if (!name || !icon) {
+    // You can still handle simple errors, but don't return
+    console.error("Name and Icon are required.");
+    return;
+  }
+
+  try {
+    await prisma.amenity.create({
+      data: {
+        name: name,
+        icon: icon,
+      },
+    });
+    revalidatePath("/admin/settings");
+  } catch (error: any) {
+    if (error.code === "P2002") {
+      console.error("An amenity with this name already exists.");
+    } else {
+      console.error("Error creating amenity:", error);
+    }
+  }
+}
+
+/**
+ * Deletes an amenity.
+ */
+// --- FIX 2: Added formData and removed return values ---
+export async function deleteAmenity(amenityId: string, formData: FormData) {
+  try {
+    await prisma.amenity.delete({
+      where: { id: amenityId },
+    });
+    revalidatePath("/admin/settings");
+  } catch (error) {
+    console.error("Error deleting amenity:", error);
   }
 }
