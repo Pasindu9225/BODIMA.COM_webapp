@@ -1,3 +1,4 @@
+// FIX 1: "use server" must be the absolute first line, no spaces
 "use server";
 
 import { z } from "zod";
@@ -6,17 +7,18 @@ import { prisma } from "@/lib/prisma";
 import { Role, UserStatus, ListingStatus } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "../auth.config";
+import type { Prisma } from "@prisma/client";
 
 const SALT_ROUNDS = 10;
 
-// Schema for student registration
 const studentSchema = z.object({
   name: z.string().min(1, "Name is required."),
   email: z.string().email("Please enter a valid email address."),
   password: z.string().min(8, "Password must be at least 8 characters long."),
 });
 
-// Schema for provider registration
 const providerSchema = z.object({
   providerName: z.string().min(1, "Provider name is required."),
   contactName: z.string().min(1, "Contact person name is required."),
@@ -31,28 +33,43 @@ const providerSchema = z.object({
   }),
 });
 
+// --- Schema for the Listing Form ---
+const listingFormSchema = z.object({
+  title: z.string().min(1, "Title is required"),
+  description: z.string().min(1, "Description is required"),
+  address: z.string().min(1, "Address is required"),
+  city: z.string().min(1, "City is required"),
+  price: z.coerce.number().min(1, "Price must be greater than 0"),
+  roomType: z.string().min(1, "Room type is required"),
+  amenities: z.array(z.string()).optional(),
+  lat: z.number().min(-90).max(90),
+  lng: z.number().min(-180).max(180),
+  photos: z
+    .array(
+      z
+        .string()
+        .url({ message: "Invalid URL" })
+        .min(1, { message: "URL can't be empty" })
+    )
+    .min(1, "At least one photo URL is required"),
+});
+
 type FormState = {
   success: boolean;
   message: string;
 };
 
-/**
- * Registers a new student user.
- */
+// ===============================================
+// STUDENT ACTIONS
+// ===============================================
 export async function registerStudent(
   values: z.infer<typeof studentSchema>
 ): Promise<FormState> {
   const validatedFields = studentSchema.safeParse(values);
-
   if (!validatedFields.success) {
-    return {
-      success: false,
-      message: "Invalid form data.",
-    };
+    return { success: false, message: "Invalid form data." };
   }
-
   const { name, email, password } = validatedFields.data;
-
   try {
     const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) {
@@ -61,19 +78,16 @@ export async function registerStudent(
         message: "An account with this email already exists.",
       };
     }
-
     const hashedPassword = await bcryptjs.hash(password, SALT_ROUNDS);
-
     await prisma.user.create({
       data: {
         name,
         email,
         password: hashedPassword,
         role: Role.STUDENT,
-        status: UserStatus.APPROVED, // Students are auto-approved
+        status: UserStatus.APPROVED,
       },
     });
-
     return { success: true, message: "Student registered successfully." };
   } catch (error) {
     console.error("Student registration error:", error);
@@ -81,36 +95,32 @@ export async function registerStudent(
   }
 }
 
-/**
- * Registers a new provider user and their profile.
- */
+// ===============================================
+// PROVIDER REGISTRATION ACTIONS
+// ===============================================
 export async function registerProvider(
   values: z.infer<typeof providerSchema>
 ): Promise<FormState> {
   const validatedFields = providerSchema.safeParse(values);
-
   if (!validatedFields.success) {
     const errorMessages = validatedFields.error.errors
       .map((e) => e.message)
       .join(", ");
-    return {
-      success: false,
-      message: `Invalid form data: ${errorMessages}`,
-    };
+    return { success: false, message: `Invalid form data: ${errorMessages}` };
   }
-
   const { providerName, contactName, email, password, phone, address, nic } =
     validatedFields.data;
-
   try {
-    await prisma.$transaction(async (tx) => {
+    await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       const existingUser = await tx.user.findUnique({ where: { email } });
       if (existingUser) {
         throw new Error("An account with this email already exists.");
       }
-
+      const existingProvider = await tx.provider.findUnique({ where: { nic } });
+      if (existingProvider) {
+        throw new Error("This NIC number is already registered.");
+      }
       const hashedPassword = await bcryptjs.hash(password, SALT_ROUNDS);
-
       const newUser = await tx.user.create({
         data: {
           name: contactName,
@@ -120,7 +130,6 @@ export async function registerProvider(
           status: UserStatus.PENDING,
         },
       });
-
       await tx.provider.create({
         data: {
           userId: newUser.id,
@@ -147,24 +156,19 @@ export async function registerProvider(
     }
     return { success: false, message: "Database error. Please try again." };
   }
-
-  // If successful, redirect to the pending page
   redirect("/provider/pending");
 }
 
-/**
- * A dummy action for the initial registration form.
- */
 export async function registerProviderRedirect() {
   return { success: true, message: "Redirecting to provider details form." };
 }
 
-/**
- * Approves a provider's registration.
- */
+// ===============================================
+// ADMIN ACTIONS
+// ===============================================
 export async function approveProvider(userId: string) {
   try {
-    await prisma.$transaction(async (tx) => {
+    await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       await tx.user.update({
         where: { id: userId },
         data: { status: UserStatus.APPROVED },
@@ -174,7 +178,6 @@ export async function approveProvider(userId: string) {
         data: { isVerified: true },
       });
     });
-
     revalidatePath("/admin/dashboard");
     revalidatePath("/admin/users");
     return { success: true, message: "Provider approved." };
@@ -184,12 +187,9 @@ export async function approveProvider(userId: string) {
   }
 }
 
-/**
- * Rejects a provider's registration.
- */
 export async function rejectProvider(userId: string) {
   try {
-    await prisma.$transaction(async (tx) => {
+    await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       await tx.user.delete({ where: { id: userId } });
     });
     revalidatePath("/admin/dashboard");
@@ -201,9 +201,6 @@ export async function rejectProvider(userId: string) {
   }
 }
 
-/**
- * Approves a property listing.
- */
 export async function approveListing(listingId: string, formData: FormData) {
   try {
     await prisma.listing.update({
@@ -216,9 +213,6 @@ export async function approveListing(listingId: string, formData: FormData) {
   }
 }
 
-/**
- * Rejects a property listing.
- */
 export async function rejectListing(listingId: string, formData: FormData) {
   try {
     await prisma.listing.update({
@@ -231,26 +225,19 @@ export async function rejectListing(listingId: string, formData: FormData) {
   }
 }
 
-/**
- * Creates a new amenity.
- */
-// --- FIX 1: Removed the return values ---
+// ===============================================
+// AMENITY ACTIONS
+// ===============================================
 export async function createAmenity(formData: FormData) {
   const name = formData.get("name") as string;
   const icon = formData.get("icon") as string;
-
   if (!name || !icon) {
-    // You can still handle simple errors, but don't return
     console.error("Name and Icon are required.");
     return;
   }
-
   try {
     await prisma.amenity.create({
-      data: {
-        name: name,
-        icon: icon,
-      },
+      data: { name, icon },
     });
     revalidatePath("/admin/settings");
   } catch (error: any) {
@@ -262,10 +249,6 @@ export async function createAmenity(formData: FormData) {
   }
 }
 
-/**
- * Deletes an amenity.
- */
-// --- FIX 2: Added formData and removed return values ---
 export async function deleteAmenity(amenityId: string, formData: FormData) {
   try {
     await prisma.amenity.delete({
@@ -274,5 +257,184 @@ export async function deleteAmenity(amenityId: string, formData: FormData) {
     revalidatePath("/admin/settings");
   } catch (error) {
     console.error("Error deleting amenity:", error);
+  }
+}
+
+// ===============================================
+// PROVIDER LISTING ACTIONS
+// ===============================================
+export async function createListing(
+  values: z.infer<typeof listingFormSchema>
+): Promise<FormState> {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id || session.user.role !== "PROVIDER") {
+    return { success: false, message: "Error: Not authorized." };
+  }
+
+  const providerId = session.user.id;
+  const validatedFields = listingFormSchema.safeParse(values);
+  if (!validatedFields.success) {
+    console.error("Validation failed:", validatedFields.error.errors);
+    return {
+      success: false,
+      message:
+        "Error: Invalid data. " +
+        validatedFields.error.errors.map((e) => e.message).join(", "),
+    };
+  }
+
+  const {
+    title,
+    description,
+    address,
+    city,
+    price,
+    roomType,
+    amenities = [],
+    lat,
+    lng,
+    photos,
+  } = validatedFields.data;
+
+  try {
+    await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      const newListing = await tx.listing.create({
+        data: {
+          title,
+          description,
+          address,
+          city,
+          price,
+          roomType,
+          status: ListingStatus.PENDING,
+          providerId,
+          lat,
+          lng,
+        },
+      });
+
+      if (amenities.length > 0) {
+        await tx.listingAmenity.createMany({
+          data: amenities.map((amenityId) => ({
+            listingId: newListing.id,
+            amenityId,
+          })),
+        });
+      }
+
+      await tx.photo.createMany({
+        data: photos.map((url, index) => ({
+          listingId: newListing.id,
+          url,
+          isCover: index === 0,
+        })),
+      });
+    });
+  } catch (error) {
+    console.error("Error creating listing:", error);
+    return { success: false, message: "Error: Failed to create listing." };
+  }
+
+  revalidatePath("/provider/dashboard");
+  return { success: true, message: "Listing created successfully!" };
+}
+
+export async function updateListing(listingId: string, formData: FormData) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id || session.user.role !== "PROVIDER") {
+    throw new Error("Unauthorized");
+  }
+
+  const providerId = session.user.id;
+  const title = formData.get("title") as string;
+  const description = formData.get("description") as string;
+  const address = formData.get("address") as string;
+  const city = formData.get("city") as string;
+  const price = parseFloat(formData.get("price") as string);
+  const roomType = formData.get("roomType") as string;
+  const amenityIds = formData.getAll("amenities") as string[];
+  const photoUrls = formData.getAll("photos") as string[];
+
+  if (!title || !address || !city || !price || !roomType) {
+    throw new Error("Missing required fields");
+  }
+
+  try {
+    const listing = await prisma.listing.findUnique({
+      where: { id: listingId },
+      select: { providerId: true },
+    });
+
+    if (!listing || listing.providerId !== providerId) {
+      throw new Error("Forbidden: You do not own this listing.");
+    }
+
+    await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      await tx.listing.update({
+        where: { id: listingId },
+        data: {
+          title,
+          description,
+          address,
+          city,
+          price,
+          roomType,
+          status: ListingStatus.PENDING,
+        },
+      });
+
+      await tx.listingAmenity.deleteMany({ where: { listingId } });
+      if (amenityIds.length > 0) {
+        await tx.listingAmenity.createMany({
+          data: amenityIds.map((amenityId) => ({
+            listingId,
+            amenityId,
+          })),
+        });
+      }
+
+      await tx.photo.deleteMany({ where: { listingId } });
+      if (photoUrls.length > 0) {
+        await tx.photo.createMany({
+          data: photoUrls
+            .filter((url) => url.trim() !== "")
+            .map((url, index) => ({
+              listingId,
+              url,
+              isCover: index === 0,
+            })),
+        });
+      }
+    });
+  } catch (error) {
+    console.error("Error updating listing:", error);
+    throw new Error("Failed to update listing.");
+  }
+
+  revalidatePath("/provider/dashboard");
+  redirect("/provider/dashboard");
+}
+
+export async function deleteListing(listingId: string, formData: FormData) {
+  const session = await getServerSession(authOptions);
+  const providerId = session?.user?.id;
+  if (!providerId || session.user.role !== "PROVIDER") {
+    throw new Error("Not authorized");
+  }
+
+  try {
+    const listing = await prisma.listing.findUnique({
+      where: { id: listingId },
+      select: { providerId: true },
+    });
+
+    if (!listing || listing.providerId !== providerId) {
+      throw new Error("Forbidden: You do not own this listing.");
+    }
+
+    await prisma.listing.delete({ where: { id: listingId } });
+    revalidatePath("/provider/dashboard");
+  } catch (error) {
+    console.error("Error deleting listing:", error);
   }
 }

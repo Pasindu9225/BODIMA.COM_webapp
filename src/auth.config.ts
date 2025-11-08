@@ -1,66 +1,69 @@
-import type { NextAuthConfig } from 'next-auth';
-import CredentialsProvider from 'next-auth/providers/credentials';
-import bcryptjs from 'bcryptjs';
-import { prisma } from '@/lib/prisma';
-import { Role, UserStatus } from '@prisma/client';
+// src/auth.config.ts
+import { PrismaAdapter } from "@next-auth/prisma-adapter";
+import { prisma } from "@/lib/prisma";
+import CredentialsProvider from "next-auth/providers/credentials";
+import bcryptjs from "bcryptjs";
+import type { NextAuthOptions } from "next-auth";
 
-export const authConfig: NextAuthConfig = {
+export const authOptions: NextAuthOptions = {
+  adapter: PrismaAdapter(prisma),
+
   providers: [
     CredentialsProvider({
-      name: 'Credentials',
+      name: "Credentials",
       credentials: {
-        email: { label: 'Email', type: 'email' },
-        password: { label: 'Password', type: 'password' },
+        email: { label: "Email", type: "email" },
+        password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
-          return null;
+        if (!credentials?.email || !credentials.password) {
+          throw new Error("Missing credentials");
         }
-
-        const email = credentials.email as string;
-        const password = credentials.password as string;
 
         const user = await prisma.user.findUnique({
-          where: { email: email },
+          where: { email: credentials.email },
         });
 
-        if (!user || !user.password) {
-          return null;
+        if (!user) {
+          throw new Error("No user found with this email");
         }
 
-        const passwordsMatch = await bcryptjs.compare(password, user.password);
-
-        if (passwordsMatch) {
-          return user;
+        if (!user.password) {
+          throw new Error("User password not set");
         }
 
-        return null;
+        const isValid = await bcryptjs.compare(
+          credentials.password,
+          user.password
+        );
+
+        if (!isValid) {
+          throw new Error("Invalid password");
+        }
+
+        return user;
       },
     }),
   ],
-  session: {
-    strategy: 'jwt',
-  },
+
+  session: { strategy: "jwt" },
+
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        token.id = user.id as string;
-        token.role = user.role as Role;
-        token.status = user.status as UserStatus;
+        token.id = user.id;
+        token.role = user.role;
       }
       return token;
     },
     async session({ session, token }) {
-      if (session.user) {
-        session.user.id = token.id as string;
-        session.user.role = token.role as Role;
-        session.user.status = token.status as UserStatus;
+      if (token) {
+        session.user.id = token.id;
+        session.user.role = token.role;
       }
       return session;
     },
   },
-  pages: {
-    signIn: '/login',
-    error: '/login', // Redirect to login on error
-  },
+
+  secret: process.env.NEXTAUTH_SECRET,
 };
