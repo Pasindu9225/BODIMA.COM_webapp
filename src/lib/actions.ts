@@ -1,4 +1,3 @@
-// FIX 1: "use server" must be the absolute first line, no spaces
 "use server";
 
 import { z } from "zod";
@@ -10,6 +9,7 @@ import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "../auth.config";
 import type { Prisma } from "@prisma/client";
+import auth from "@/auth";
 
 const SALT_ROUNDS = 10;
 
@@ -436,5 +436,166 @@ export async function deleteListing(listingId: string, formData: FormData) {
     revalidatePath("/provider/dashboard");
   } catch (error) {
     console.error("Error deleting listing:", error);
+  }
+}
+
+export async function updateProviderProfile(formData: FormData): Promise<void> {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) throw new Error("Unauthorized");
+
+  const name = formData.get("name") as string;
+  const phone = formData.get("phone") as string;
+  const address = formData.get("address") as string;
+
+  if (!name || !phone || !address) throw new Error("Missing required fields");
+
+  await prisma.user.update({
+    where: { id: session.user.id },
+    data: {
+      name,
+      providerProfile: {
+        update: {
+          phone,
+          address,
+        },
+      },
+    },
+  });
+
+  // ✅ Optionally revalidate page
+  revalidatePath("/provider/profile");
+}
+
+export async function updateProviderPassword(
+  formData: FormData
+): Promise<FormState> {
+  try {
+    const session = await auth();
+    if (!session?.user?.id || session.user.role !== "PROVIDER") {
+      return { success: false, message: "Error: Not authorized." };
+    }
+
+    const userId = session.user.id;
+    const currentPassword = formData.get("currentPassword") as string;
+    const newPassword = formData.get("newPassword") as string;
+
+    if (!currentPassword || !newPassword) {
+      return { success: false, message: "Error: All fields are required." };
+    }
+
+    if (newPassword.length < 8) {
+      return {
+        success: false,
+        message: "Error: New password must be at least 8 characters long.",
+      };
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { password: true },
+    });
+
+    if (!user || !user.password) {
+      return { success: false, message: "Error: User not found." };
+    }
+
+    const isPasswordCorrect = await bcryptjs.compare(
+      currentPassword,
+      user.password
+    );
+
+    if (!isPasswordCorrect) {
+      return { success: false, message: "Error: Incorrect current password." };
+    }
+
+    const hashedNewPassword = await bcryptjs.hash(newPassword, SALT_ROUNDS);
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: { password: hashedNewPassword },
+    });
+
+    revalidatePath("/provider/settings");
+    return { success: true, message: "Password updated successfully!" };
+  } catch (error) {
+    console.error("Error updating password:", error);
+    return { success: false, message: "Error: Failed to update password." };
+  }
+}
+
+export async function getUniversities() {
+  try {
+    const universities = await prisma.university.findMany({
+      orderBy: { name: "asc" },
+    });
+    return universities;
+  } catch (error) {
+    console.error("Error fetching universities:", error);
+    return [];
+  }
+}
+
+export async function addUniversity(formData: FormData) {
+  try {
+    const session = await getServerSession(authOptions);
+
+    // Check admin access
+    if (!session?.user || session.user.role !== "ADMIN") {
+      return { success: false, message: "Unauthorized access." };
+    }
+
+    // ✅ Retrieve form values properly
+    const name = formData.get("name") as string;
+    const city = formData.get("city") as string;
+    const address = formData.get("address") as string;
+    const lat = parseFloat(formData.get("lat") as string);
+    const lng = parseFloat(formData.get("lng") as string);
+
+    if (!name || !city || !address || isNaN(lat) || isNaN(lng)) {
+      return {
+        success: false,
+        message: "Please fill in all fields correctly.",
+      };
+    }
+
+    // ✅ Create new university
+    await prisma.university.create({
+      data: {
+        name,
+        city,
+        address,
+        lat,
+        lng,
+      },
+    });
+
+    revalidatePath("/admin/university");
+
+    return { success: true, message: "University added successfully!" };
+  } catch (error) {
+    console.error("Error adding university:", error);
+    return {
+      success: false,
+      message: "An error occurred while adding the university.",
+    };
+  }
+}
+
+/**
+ * Delete a university by id.
+ */
+export async function deleteUniversity(formData: FormData) {
+  try {
+    const id = formData.get("id") as string;
+
+    if (!id) throw new Error("University ID not provided.");
+
+    await prisma.university.delete({ where: { id } });
+
+    revalidatePath("/admin/university");
+    return { success: true, message: "University deleted successfully." };
+  } catch (error) {
+    console.error("Error deleting university:", error);
+    return { success: false, message: "Failed to delete university." };
   }
 }

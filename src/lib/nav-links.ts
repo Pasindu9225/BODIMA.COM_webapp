@@ -1,5 +1,16 @@
-import type { LucideIcon } from 'lucide-react';
-import { LayoutDashboard, Users, Building, PlusCircle, MessageSquareQuote, User, Settings, LifeBuoy, Map } from 'lucide-react';
+import type { LucideIcon } from "lucide-react";
+import {
+  LayoutDashboard,
+  Users,
+  Building,
+  PlusCircle,
+  MessageSquareQuote,
+  User,
+  Settings,
+  LifeBuoy,
+  Map,
+  Building2, // 🏛️ added for Universities tab
+} from "lucide-react";
 
 export type NavLink = {
   href: string;
@@ -18,21 +29,32 @@ export const iconMap = {
   Settings,
   LifeBuoy,
   Map,
+  Building2, // 🏛️ added icon mapping
 };
 
 // studentNavLinks is no longer needed as there is no student dashboard
 export const studentNavLinks: NavLink[] = [];
 
 export const providerNavLinks: NavLink[] = [
-  { href: '/provider/dashboard', label: 'Dashboard', iconName: 'LayoutDashboard' },
-  { href: '/provider/listings/new', label: 'Add Listing', iconName: 'PlusCircle' },
-  { href: '/provider/profile', label: 'Profile', iconName: 'User' },
-  { href: '/provider/settings', label: 'Settings', iconName: 'Settings' },
+  {
+    href: "/provider/dashboard",
+    label: "Dashboard",
+    iconName: "LayoutDashboard",
+  },
+  {
+    href: "/provider/listings/new",
+    label: "Add Listing",
+    iconName: "PlusCircle",
+  },
+  { href: "/provider/profile", label: "Profile", iconName: "User" },
+  { href: "/provider/settings", label: "Settings", iconName: "Settings" },
 ];
 
+// ✅ Admin Navigation with Universities tab
 export const adminNavLinks: NavLink[] = [
-  { href: '/admin/dashboard', label: 'Dashboard', iconName: 'LayoutDashboard' },
-  { href: '/admin/users', label: 'Users', iconName: 'Users' },
-  { href: '/admin/listings', label: 'Listings', iconName: 'Building' },
-  { href: '/admin/settings', label: 'Settings', iconName: 'Settings' },
+  { href: "/admin/dashboard", label: "Dashboard", iconName: "LayoutDashboard" },
+  { href: "/admin/users", label: "Users", iconName: "Users" },
+  { href: "/admin/listings", label: "Listings", iconName: "Building" },
+  { href: "/admin/university", label: "Universities", iconName: "Building2" }, // 🏛️ NEW TAB
+  { href: "/admin/settings", label: "Settings", iconName: "Settings" },
 ];

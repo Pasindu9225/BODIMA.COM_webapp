@@ -1,10 +1,7 @@
-// src/app/provider/listings/new/page.tsx
 import { prisma } from "@/lib/prisma";
 import { NewListingForm } from "./NewListingForm"; // We will create this file next
 
-// This is now an async Server Component (no 'use client')
 export default async function NewListingPage() {
-  // 1. Fetch real amenities from the database ON THE SERVER
   const amenities = await prisma.amenity.findMany({
     orderBy: {
       name: "asc",

@@ -10,6 +10,7 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
+    "seed": "dotenv -e .env -- tsx prisma/seed.ts",
     "postinstall": "dotenv -e .env -- prisma generate"
   },
   "dependencies": {
