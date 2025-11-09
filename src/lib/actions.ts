@@ -59,9 +59,6 @@ type FormState = {
   message: string;
 };
 
-// ===============================================
-// STUDENT ACTIONS
-// ===============================================
 export async function registerStudent(
   values: z.infer<typeof studentSchema>
 ): Promise<FormState> {
@@ -95,9 +92,6 @@ export async function registerStudent(
   }
 }
 
-// ===============================================
-// PROVIDER REGISTRATION ACTIONS
-// ===============================================
 export async function registerProvider(
   values: z.infer<typeof providerSchema>
 ): Promise<FormState> {
@@ -163,9 +157,6 @@ export async function registerProviderRedirect() {
   return { success: true, message: "Redirecting to provider details form." };
 }
 
-// ===============================================
-// ADMIN ACTIONS
-// ===============================================
 export async function approveProvider(userId: string) {
   try {
     await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
@@ -225,9 +216,6 @@ export async function rejectListing(listingId: string, formData: FormData) {
   }
 }
 
-// ===============================================
-// AMENITY ACTIONS
-// ===============================================
 export async function createAmenity(formData: FormData) {
   const name = formData.get("name") as string;
   const icon = formData.get("icon") as string;
@@ -260,9 +248,6 @@ export async function deleteAmenity(amenityId: string, formData: FormData) {
   }
 }
 
-// ===============================================
-// PROVIDER LISTING ACTIONS
-// ===============================================
 export async function createListing(
   values: z.infer<typeof listingFormSchema>
 ): Promise<FormState> {
@@ -462,7 +447,6 @@ export async function updateProviderProfile(formData: FormData): Promise<void> {
     },
   });
 
-  // ✅ Optionally revalidate page
   revalidatePath("/provider/profile");
 }
 
@@ -539,12 +523,10 @@ export async function addUniversity(formData: FormData) {
   try {
     const session = await getServerSession(authOptions);
 
-    // Check admin access
     if (!session?.user || session.user.role !== "ADMIN") {
       return { success: false, message: "Unauthorized access." };
     }
 
-    // ✅ Retrieve form values properly
     const name = formData.get("name") as string;
     const city = formData.get("city") as string;
     const address = formData.get("address") as string;
@@ -558,7 +540,6 @@ export async function addUniversity(formData: FormData) {
       };
     }
 
-    // ✅ Create new university
     await prisma.university.create({
       data: {
         name,
@@ -581,9 +562,6 @@ export async function addUniversity(formData: FormData) {
   }
 }
 
-/**
- * Delete a university by id.
- */
 export async function deleteUniversity(formData: FormData) {
   try {
     const id = formData.get("id") as string;
@@ -597,5 +575,109 @@ export async function deleteUniversity(formData: FormData) {
   } catch (error) {
     console.error("Error deleting university:", error);
     return { success: false, message: "Failed to delete university." };
+  }
+}
+
+export async function searchUniversities(query?: string) {
+  try {
+    if (!query || query.trim() === "") {
+      return await prisma.university.findMany({
+        orderBy: { name: "asc" },
+        take: 10,
+      });
+    }
+
+    return await prisma.university.findMany({
+      where: {
+        name: {
+          contains: query,
+          mode: "insensitive",
+        },
+      },
+      orderBy: { name: "asc" },
+      take: 10,
+    });
+  } catch (error) {
+    console.error("Error fetching universities:", error);
+    return [];
+  }
+}
+
+export async function getRandomListings(limit = 10) {
+  try {
+    const listings = await prisma.listing.findMany({
+      take: limit,
+      orderBy: { createdAt: "desc" },
+    });
+
+    // Shuffle randomly
+    return listings.sort(() => Math.random() - 0.5);
+  } catch (error) {
+    console.error("Error fetching listings:", error);
+    return [];
+  }
+}
+
+export async function searchListings(query: string) {
+  try {
+    if (!query || query.trim() === "") return [];
+
+    return await prisma.listing.findMany({
+      where: {
+        OR: [
+          {
+            city: { contains: query, mode: "insensitive" },
+          },
+          {
+            title: { contains: query, mode: "insensitive" },
+          },
+          {
+            address: { contains: query, mode: "insensitive" },
+          },
+        ],
+      },
+      orderBy: { createdAt: "desc" },
+      take: 10,
+    });
+  } catch (error) {
+    console.error("Error searching listings:", error);
+    return [];
+  }
+}
+export async function getListingsNearUniversity(universityName: string, radiusKm = 5) {
+  try {
+    const university = await prisma.university.findFirst({
+      where: {
+        name: { contains: universityName, mode: "insensitive" },
+      },
+    });
+
+    if (!university) {
+      console.warn("University not found for:", universityName);
+      return { university: null, listings: [] };
+    }
+
+    const listings = await prisma.listing.findMany({
+      where: { status: ListingStatus.APPROVED },
+    });
+
+    const R = 6371;
+    const nearby = listings.filter((listing) => {
+      const dLat = (listing.lat - university.lat) * (Math.PI / 180);
+      const dLng = (listing.lng - university.lng) * (Math.PI / 180);
+      const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(university.lat * (Math.PI / 180)) *
+          Math.cos(listing.lat * (Math.PI / 180)) *
+          Math.sin(dLng / 2) * Math.sin(dLng / 2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      const distance = R * c; // in km
+      return distance <= radiusKm;
+    });
+
+    return { university, listings: nearby };
+  } catch (error) {
+    console.error("Error finding listings near university:", error);
+    return { university: null, listings: [] };
   }
 }

@@ -1,32 +1,42 @@
-'use client';
+"use client";
 
-import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
-import 'leaflet/dist/leaflet.css';
-import L from 'leaflet';
-import { useEffect, useRef, memo } from 'react';
-import type { Listing, University, MarkerData } from '@/lib/types';
+import {
+  MapContainer,
+  TileLayer,
+  Marker,
+  Popup,
+  useMap,
+  useMapEvents,
+} from "react-leaflet";
+import "leaflet/dist/leaflet.css";
+import L from "leaflet";
+import { useEffect, useRef, memo } from "react";
+import type { Listing, University, MarkerData } from "@/lib/types";
 
-// Fix for default icon not showing in Next.js
+// ✅ Fix for default icon not showing in Next.js
 delete (L.Icon.Default.prototype as any)._getIconUrl;
 
 L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+  iconRetinaUrl:
+    "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
 });
 
+// 🎓 University marker icon (Lucide-style from CDN)
 const universityIcon = new L.Icon({
-    iconUrl: 'https://img.icons8.com/plasticine/100/university.png',
-    iconSize: [35, 35],
-    iconAnchor: [17, 35],
-    popupAnchor: [0, -35],
+  iconUrl: "https://img.icons8.com/color/96/graduation-cap--v1.png",
+  iconSize: [40, 40],
+  iconAnchor: [20, 40],
+  popupAnchor: [0, -35],
 });
 
+// 📍 Listing marker icon
 const listingIcon = new L.Icon({
-    iconUrl: 'https://img.icons8.com/office/80/marker.png',
-    iconSize: [35, 35],
-    iconAnchor: [17, 35],
-    popupAnchor: [0, -35],
+  iconUrl: "https://img.icons8.com/office/80/marker.png",
+  iconSize: [35, 35],
+  iconAnchor: [17, 35],
+  popupAnchor: [0, -35],
 });
 
 type LeafletMapProps = {
@@ -38,7 +48,14 @@ type LeafletMapProps = {
   onPopupClose: () => void;
 };
 
-function ChangeView({ center, zoom }: { center: [number, number], zoom: number }) {
+// 🔹 Updates map view dynamically
+function ChangeView({
+  center,
+  zoom,
+}: {
+  center: [number, number];
+  zoom: number;
+}) {
   const map = useMap();
   useEffect(() => {
     map.setView(center, zoom);
@@ -46,6 +63,7 @@ function ChangeView({ center, zoom }: { center: [number, number], zoom: number }
   return null;
 }
 
+// 🔹 Handles popup close events
 const MapEvents = ({ onPopupClose }: { onPopupClose: () => void }) => {
   useMapEvents({
     popupclose: onPopupClose,
@@ -53,29 +71,27 @@ const MapEvents = ({ onPopupClose }: { onPopupClose: () => void }) => {
   return null;
 };
 
-const LeafletMap = memo(function LeafletMap({ 
-  center, 
-  zoom, 
-  markers, 
-  selectedListing, 
-  onMarkerClick, 
-  onPopupClose 
+// 🔹 Main Map Component
+const LeafletMap = memo(function LeafletMap({
+  center,
+  zoom,
+  markers,
+  selectedListing,
+  onMarkerClick,
+  onPopupClose,
 }: LeafletMapProps) {
-  
   const popupRef = useRef<L.Popup | null>(null);
 
   useEffect(() => {
-    if (popupRef.current) {
-      popupRef.current.update();
-    }
+    if (popupRef.current) popupRef.current.update();
   }, [selectedListing]);
-  
+
   return (
-    <MapContainer 
-      center={center} 
-      zoom={zoom} 
-      scrollWheelZoom={true} 
-      style={{ height: '100%', width: '100%', zIndex: 1 }}
+    <MapContainer
+      center={center}
+      zoom={zoom}
+      scrollWheelZoom={true}
+      style={{ height: "100%", width: "100%", zIndex: 1 }}
     >
       <ChangeView center={center} zoom={zoom} />
       <TileLayer
@@ -83,21 +99,16 @@ const LeafletMap = memo(function LeafletMap({
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
       <MapEvents onPopupClose={onPopupClose} />
+
       {markers.map((marker, idx) => (
-        <Marker 
-          key={idx} 
-          position={marker.position} 
+        <Marker
+          key={idx}
+          position={marker.position}
           eventHandlers={{ click: () => onMarkerClick(marker.item) }}
-          icon={marker.type === 'university' ? universityIcon : listingIcon}
+          icon={marker.type === "university" ? universityIcon : listingIcon}
+          opacity={marker.type === "listing" ? 0.9 : 1} // 💡 Make listings slightly transparent
         >
-          {marker.type === 'listing' && (
-             <Popup ref={popupRef}>
-               {marker.popupContent}
-             </Popup>
-          )}
-           {marker.type === 'university' && (
-             <Popup>{marker.popupContent}</Popup>
-          )}
+          <Popup ref={popupRef}>{marker.popupContent}</Popup>
         </Marker>
       ))}
     </MapContainer>
