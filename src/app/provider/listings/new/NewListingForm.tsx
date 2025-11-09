@@ -1,9 +1,15 @@
 "use client";
+
 import { useRouter } from "next/navigation";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Button } from "@/components/ui/button";
+import { useTransition, useState } from "react";
+import { toast } from "sonner";
+import dynamic from "next/dynamic";
+import { Amenity } from "@prisma/client";
+import { createListing } from "@/lib/actions";
+
 import {
   Card,
   CardContent,
@@ -21,6 +27,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
@@ -29,13 +36,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Amenity } from "@prisma/client";
-import { useTransition } from "react"; // Removed useState and useEffect
-import { createListing } from "@/lib/actions";
-import { toast } from "sonner";
-import dynamic from "next/dynamic";
 
-// --- This dynamically imports the map to prevent SSR errors ---
+// dynamic import for map (avoids SSR errors)
 const LocationPicker = dynamic(
   () =>
     import("@/components/ui/LocationPicker").then((mod) => mod.LocationPicker),
@@ -49,7 +51,6 @@ const LocationPicker = dynamic(
   }
 );
 
-// This schema MUST match the one in your server action
 const listingSchema = z.object({
   title: z.string().min(1, "Title is required"),
   description: z.string().min(1, "Description is required"),
@@ -60,24 +61,14 @@ const listingSchema = z.object({
   amenities: z.array(z.string()).optional(),
   lat: z.number().min(-90).max(90, "Invalid latitude"),
   lng: z.number().min(-180).max(180, "Invalid longitude"),
-  photos: z
-    .array(
-      z
-        .string()
-        .url({ message: "Invalid URL" })
-        .min(1, { message: "Photo URL cannot be empty" })
-    )
-    .min(1, "At least one photo URL is required.")
-    .max(3, "You can upload a maximum of 3 photos."),
+  photos: z.array(z.string().url()).max(5).optional(),
 });
 
-// FIX 1: This component now accepts 'amenities' as a prop
 export function NewListingForm({ amenities }: { amenities: Amenity[] }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-
-  // FIX 2: We REMOVED the broken getAmenities() and useEffect
-  // The 'amenities' prop now comes from the server page
+  const [uploading, setUploading] = useState(false);
+  const [previewUrls, setPreviewUrls] = useState<string[]>([]);
 
   const form = useForm<z.infer<typeof listingSchema>>({
     resolver: zodResolver(listingSchema),
@@ -89,16 +80,49 @@ export function NewListingForm({ amenities }: { amenities: Amenity[] }) {
       price: 0,
       roomType: undefined,
       amenities: [],
-      lat: 7.8731, // Default to Sri Lanka center
+      lat: 7.8731,
       lng: 80.7718,
-      photos: ["", "", ""],
+      photos: [],
     },
   });
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files ? Array.from(e.target.files) : [];
+    if (files.length === 0) return;
+
+    if (files.length + previewUrls.length > 5) {
+      toast.error("You can upload a maximum of 5 photos");
+      return;
+    }
+
+    setUploading(true);
+
+    const formData = new FormData();
+    files.forEach((f) => formData.append("photos", f));
+
+    const res = await fetch("/api/upload", {
+      method: "POST",
+      body: formData,
+    });
+
+    setUploading(false);
+
+    if (!res.ok) {
+      toast.error("Upload failed");
+      return;
+    }
+
+    const { urls } = await res.json();
+    const updated = [...previewUrls, ...urls];
+    setPreviewUrls(updated);
+    form.setValue("photos", updated);
+    toast.success(`${urls.length} photo(s) uploaded`);
+  };
 
   const onSubmit = (values: z.infer<typeof listingSchema>) => {
     const validValues = {
       ...values,
-      photos: values.photos.filter((url) => url.trim() !== ""),
+      photos: previewUrls,
     };
 
     startTransition(async () => {
@@ -114,11 +138,9 @@ export function NewListingForm({ amenities }: { amenities: Amenity[] }) {
 
   return (
     <div className="space-y-6">
-      {/* This is a CLIENT component ('use client').
-        The form, map, and user interactions are all here.
-      */}
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+          {/* --- Basic Information --- */}
           <Card>
             <CardHeader>
               <CardTitle>Basic Information</CardTitle>
@@ -159,6 +181,7 @@ export function NewListingForm({ amenities }: { amenities: Amenity[] }) {
             </CardContent>
           </Card>
 
+          {/* --- Location & Pricing --- */}
           <Card>
             <CardHeader>
               <CardTitle>Location & Pricing</CardTitle>
@@ -206,7 +229,6 @@ export function NewListingForm({ amenities }: { amenities: Amenity[] }) {
                 />
               </div>
 
-              {/* --- Leaflet Map Component --- */}
               <div className="space-y-2">
                 <FormLabel>Set Location on Map</FormLabel>
                 <CardDescription>
@@ -238,6 +260,7 @@ export function NewListingForm({ amenities }: { amenities: Amenity[] }) {
             </CardContent>
           </Card>
 
+          {/* --- Room Details & Amenities --- */}
           <Card>
             <CardHeader>
               <CardTitle>Room Details & Amenities</CardTitle>
@@ -285,17 +308,13 @@ export function NewListingForm({ amenities }: { amenities: Amenity[] }) {
                       <FormLabel>Amenities</FormLabel>
                     </div>
                     <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
-                      {/* FIX 3: This now uses the 'amenities' prop */}
                       {amenities.map((item) => (
                         <FormField
                           key={item.id}
                           control={form.control}
                           name="amenities"
                           render={({ field }) => (
-                            <FormItem
-                              key={item.id}
-                              className="flex flex-row items-start space-x-3 space-y-0"
-                            >
+                            <FormItem className="flex flex-row items-start space-x-3 space-y-0">
                               <FormControl>
                                 <Checkbox
                                   checked={field.value?.includes(item.id)}
@@ -307,7 +326,7 @@ export function NewListingForm({ amenities }: { amenities: Amenity[] }) {
                                         ])
                                       : field.onChange(
                                           field.value?.filter(
-                                            (value) => value !== item.id
+                                            (v) => v !== item.id
                                           )
                                         );
                                   }}
@@ -328,57 +347,99 @@ export function NewListingForm({ amenities }: { amenities: Amenity[] }) {
             </CardContent>
           </Card>
 
+          {/* --- Modern Photo Upload --- */}
           <Card>
             <CardHeader>
               <CardTitle>Photos</CardTitle>
               <CardDescription>
-                Add links to your photos (max 3). The first photo will be the
-                cover image.
+                Upload up to 5 photos (first becomes the cover).
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <FormField
-                control={form.control}
-                name="photos.0"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Photo 1 (Cover)</FormLabel>
-                    <FormControl>
-                      <Input placeholder="http://.../photo1.jpg" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
+
+            <CardContent>
+              <div
+                className={`border-2 border-dashed rounded-xl p-6 flex flex-col items-center justify-center cursor-pointer transition ${
+                  uploading
+                    ? "opacity-50 cursor-wait"
+                    : "hover:bg-muted/40 hover:border-muted-foreground/50"
+                }`}
+                onClick={() =>
+                  !uploading && document.getElementById("photoInput")?.click()
+                }
+              >
+                <input
+                  id="photoInput"
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={handleFileUpload}
+                  className="hidden"
+                  disabled={uploading}
+                />
+
+                {previewUrls.length === 0 ? (
+                  <div className="text-center space-y-2">
+                    <p className="text-sm text-muted-foreground">
+                      Click to upload or drag and drop images
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      (Max 5 images, JPG or PNG)
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4 w-full">
+                      {previewUrls.map((url, idx) => (
+                        <div
+                          key={idx}
+                          className="relative rounded-lg overflow-hidden border bg-muted/10 group"
+                        >
+                          <img
+                            src={url}
+                            alt={`Uploaded photo ${idx + 1}`}
+                            className="h-40 w-full object-cover"
+                          />
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const updated = previewUrls.filter(
+                                (_, i) => i !== idx
+                              );
+                              setPreviewUrls(updated);
+                              form.setValue("photos", updated);
+                            }}
+                            className="absolute top-1 right-1 bg-black/60 text-white text-xs rounded-full px-2 py-1 opacity-0 group-hover:opacity-100 transition"
+                          >
+                            ✕
+                          </button>
+                          {idx === 0 && (
+                            <span className="absolute bottom-1 left-1 bg-blue-600 text-white text-xs px-2 py-0.5 rounded">
+                              Cover
+                            </span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+
+                    {previewUrls.length < 5 && (
+                      <div className="mt-4 text-sm text-muted-foreground text-center">
+                        Click anywhere here to add more photos
+                      </div>
+                    )}
+                  </>
                 )}
-              />
-              <FormField
-                control={form.control}
-                name="photos.1"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Photo 2</FormLabel>
-                    <FormControl>
-                      <Input placeholder="http://.../photo2.jpg" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
+
+                {uploading && (
+                  <p className="mt-3 text-sm text-muted-foreground animate-pulse">
+                    Uploading...
+                  </p>
                 )}
-              />
-              <FormField
-                control={form.control}
-                name="photos.2"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Photo 3</FormLabel>
-                    <FormControl>
-                      <Input placeholder="http://.../photo3.jpg" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              </div>
             </CardContent>
           </Card>
 
+          {/* --- Submit --- */}
           <div className="flex justify-end gap-2">
             <Button
               variant="outline"
