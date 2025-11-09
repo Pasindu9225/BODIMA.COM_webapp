@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import { Header } from "@/components/header";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -46,18 +47,18 @@ function toUiUniversity(db: DbUniversity): University {
 
 export default function SearchPage() {
   const [query, setQuery] = useState("");
-  const [distance, setDistance] = useState(5); // ✅ default distance filter
+  const [distance, setDistance] = useState(5);
   const [listings, setListings] = useState<Listing[]>([]);
   const [allUniversities, setAllUniversities] = useState<DbUniversity[]>([]);
   const [suggestions, setSuggestions] = useState<DbUniversity[]>([]);
   const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
   const [mapCenter, setMapCenter] = useState<[number, number]>([
     7.8731, 80.7718,
-  ]); // Sri Lanka
+  ]);
   const [mapZoom, setMapZoom] = useState(8);
   const [isPending, startTransition] = useTransition();
 
-  // Dynamic Leaflet map (client-only)
+  // Dynamic import of Leaflet map
   const LeafletMap = useMemo(
     () =>
       dynamic(() => import("@/components/leaflet-map"), {
@@ -67,7 +68,7 @@ export default function SearchPage() {
     []
   );
 
-  // 🔹 1. Load random listings + universities at startup
+  // 🔹 Load random listings + universities at startup
   useEffect(() => {
     (async () => {
       try {
@@ -84,7 +85,7 @@ export default function SearchPage() {
     })();
   }, []);
 
-  // 🔹 2. Filter suggestions for autocomplete
+  // 🔹 Filter suggestions for autocomplete
   useEffect(() => {
     if (query.trim().length < 1) {
       setSuggestions([]);
@@ -101,17 +102,15 @@ export default function SearchPage() {
     setSuggestions(filtered);
   }, [query, allUniversities]);
 
-  // 🔹 3. Build markers for map
+  // 🔹 Build markers for map
   const markers: MarkerData[] = useMemo(
     () => [
-      // Universities
       ...allUniversities.map((uni) => ({
         position: [uni.lat, uni.lng] as [number, number],
         popupContent: <h3>{uni.name}</h3>,
         item: toUiUniversity(uni),
         type: "university" as const,
       })),
-      // Listings
       ...listings.map((listing) => ({
         position: [listing.lat, listing.lng] as [number, number],
         popupContent: (
@@ -127,7 +126,7 @@ export default function SearchPage() {
     [allUniversities, listings]
   );
 
-  // 🔹 4. Marker and card handlers
+  // 🔹 Marker and card handlers
   const handleMarkerClick = (item: Listing | University) => {
     if ("price" in item) setSelectedListing(item as Listing);
     setMapCenter([item.lat, item.lng]);
@@ -142,7 +141,7 @@ export default function SearchPage() {
 
   const handlePopupClose = () => setSelectedListing(null);
 
-  // 🔹 5. Search logic (by university + distance)
+  // 🔹 Search logic
   const handleSearch = () => {
     const q = query.trim();
     if (!q) {
@@ -161,7 +160,6 @@ export default function SearchPage() {
         const uiResults = result.listings.map(toUiListing);
         setListings(uiResults);
 
-        // ✅ Keep all universities visible
         setAllUniversities((prev) => {
           const exists = prev.some((u) => u.id === result.university.id);
           return exists ? prev : [...prev, result.university];
@@ -180,7 +178,7 @@ export default function SearchPage() {
     });
   };
 
-  // 🔹 6. Suggestion click
+  // 🔹 Suggestion click
   const handleSuggestionClick = (uni: DbUniversity) => {
     setQuery(uni.name);
     setSuggestions([]);
@@ -189,7 +187,7 @@ export default function SearchPage() {
     handleSearch();
   };
 
-  // 🔹 7. Reset map (restore all)
+  // 🔹 Reset map
   const handleReset = async () => {
     try {
       const [randomListings, universities] = await Promise.all([
@@ -276,41 +274,15 @@ export default function SearchPage() {
                   <select
                     value={distance}
                     onChange={(e) => setDistance(Number(e.target.value))}
-                    className="
-    w-full rounded-md border px-2 py-1 text-sm
-    bg-background text-foreground
-    dark:bg-gray-800 dark:text-white
-    focus:ring-2 focus:ring-primary focus:outline-none
-  "
+                    className="w-full rounded-md border px-2 py-1 text-sm bg-background text-foreground dark:bg-gray-800 dark:text-white focus:ring-2 focus:ring-primary focus:outline-none"
                   >
-                    <option
-                      value={3}
-                      className="bg-white text-black dark:bg-gray-800 dark:text-white"
-                    >
-                      3 km
-                    </option>
-                    <option
-                      value={5}
-                      className="bg-white text-black dark:bg-gray-800 dark:text-white"
-                    >
-                      5 km
-                    </option>
-                    <option
-                      value={7}
-                      className="bg-white text-black dark:bg-gray-800 dark:text-white"
-                    >
-                      7 km
-                    </option>
-                    <option
-                      value={10}
-                      className="bg-white text-black dark:bg-gray-800 dark:text-white"
-                    >
-                      10 km
-                    </option>
+                    <option value={3}>3 km</option>
+                    <option value={5}>5 km</option>
+                    <option value={7}>7 km</option>
+                    <option value={10}>10 km</option>
                   </select>
                 </div>
 
-                {/* Reset Button */}
                 <Button
                   variant="outline"
                   size="sm"
@@ -328,11 +300,12 @@ export default function SearchPage() {
                 </h3>
                 <div className="mt-4 space-y-4">
                   {listings.map((listing) => (
-                    <div
+                    <Link
                       key={listing.id}
-                      onClick={() => handleCardClick(listing)}
+                      href={`/listing/${listing.id}`}
+                      className="block"
                     >
-                      <Card className="cursor-pointer hover:shadow-md">
+                      <Card className="cursor-pointer hover:shadow-md transition">
                         <div className="p-4">
                           <h4 className="font-semibold">{listing.title}</h4>
                           <p className="text-sm text-primary">
@@ -343,7 +316,7 @@ export default function SearchPage() {
                           </p>
                         </div>
                       </Card>
-                    </div>
+                    </Link>
                   ))}
                   {listings.length === 0 && (
                     <p className="text-sm text-muted-foreground">
