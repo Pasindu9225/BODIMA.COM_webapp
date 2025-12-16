@@ -1,141 +1,111 @@
+// src/app/login/page.tsx
 'use client';
-import Image from 'next/image';
-import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { z } from 'zod';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { signIn } from 'next-auth/react';
-import { useToast } from '@/hooks/use-toast';
-import { BordimaLogo } from '@/components/bordima-logo';
+
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { PlaceHolderImages } from '@/lib/placeholder-images';
+import { Label } from '@/components/ui/label';
+import { signIn } from 'next-auth/react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useState, Suspense } from 'react'; // 1. Import Suspense
+import Link from 'next/link';
+import { toast } from 'sonner';
 
-const loginSchema = z.object({
-  email: z.string().email('Please enter a valid email address.'),
-  password: z.string().min(1, 'Password is required.'),
-});
-
-export default function LoginPage() {
+// 2. Create a sub-component for the form logic
+function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get('callbackUrl') || '/';
-  const { toast } = useToast();
-  const form = useForm<z.infer<typeof loginSchema>>({
-    resolver: zodResolver(loginSchema),
-    defaultValues: {
-      email: '',
-      password: '',
-    },
-  });
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const onSubmit = async (values: z.infer<typeof loginSchema>) => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
     try {
       const result = await signIn('credentials', {
         redirect: false,
-        email: values.email,
-        password: values.password,
+        email,
+        password,
       });
 
       if (result?.error) {
-        // The error 'CredentialsSignin' is a specific error code from Next-Auth.
-        if (result.error === 'CredentialsSignin') {
-            toast({
-                variant: 'destructive',
-                title: 'Login Failed',
-                description: 'Invalid email or password. Please try again.',
-            });
-        } else {
-             toast({
-                variant: 'destructive',
-                title: 'Login Failed',
-                description: 'An unexpected error occurred. Please try again.',
-            });
-        }
-      } else if (result?.ok) {
-        // Successful login, Next-Auth middleware will handle redirection.
-        // We push to the callbackUrl and let the middleware sort out the user's role.
+        toast.error('Invalid email or password');
+      } else {
+        toast.success('Logged in successfully!');
         router.push(callbackUrl);
-        router.refresh(); // Force a refresh to ensure middleware runs and session is updated
+        router.refresh();
       }
-    } catch(error) {
-        console.error("Login submission error", error);
-        toast({
-            variant: 'destructive',
-            title: 'Uh oh!',
-            description: 'Something went wrong during login.',
-        });
+    } catch (error) {
+      toast.error('Something went wrong');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const loginArtImage = PlaceHolderImages.find((p) => p.id === 'login-art');
-
   return (
-    <div className="flex min-h-screen w-full bg-background">
-      <div className="flex flex-1 flex-col items-center justify-center p-4 sm:p-8">
-        <div className="mx-auto flex w-full max-w-sm flex-col items-start">
-          <BordimaLogo />
-          <h1 className="mt-6 font-headline text-3xl font-bold">Welcome Back</h1>
-          <p className="mt-2 text-muted-foreground">Log in to continue to Bordima.</p>
-        </div>
-        <Card className="mt-6 w-full max-w-sm border-none bg-transparent shadow-none">
-          <CardContent className="p-0">
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Email</FormLabel>
-                      <FormControl>
-                        <Input placeholder="name@example.com" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="password"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Password</FormLabel>
-                      <FormControl>
-                        <Input type="password" placeholder="••••••••" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
-                  {form.formState.isSubmitting ? 'Logging in...' : 'Log In'}
-                </Button>
-              </form>
-            </Form>
-          </CardContent>
-        </Card>
-        <p className="mt-4 text-center text-sm text-muted-foreground">
-          Don&apos;t have an account?{' '}
-          <Link href="/register" className="font-semibold text-primary underline-offset-4 hover:underline">
-            Sign up
-          </Link>
-        </p>
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="space-y-2">
+        <Label htmlFor="email">Email</Label>
+        <Input
+          id="email"
+          type="email"
+          placeholder="m@example.com"
+          required
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
       </div>
-      <div className="relative hidden flex-1 lg:block">
-        {loginArtImage && (
-          <Image
-            src={loginArtImage.imageUrl}
-            alt="Abstract art"
-            fill
-            className="object-cover"
-            data-ai-hint={loginArtImage.imageHint}
-          />
-        )}
+      <div className="space-y-2">
+        <Label htmlFor="password">Password</Label>
+        <Input
+          id="password"
+          type="password"
+          required
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
       </div>
+      <Button type="submit" className="w-full" disabled={loading}>
+        {loading ? 'Logging in...' : 'Login'}
+      </Button>
+    </form>
+  );
+}
+
+// 3. The Main Page Component wraps the form in Suspense
+export default function LoginPage() {
+  return (
+    <div className="flex h-screen w-full items-center justify-center px-4">
+      <Card className="w-full max-w-sm">
+        <CardHeader>
+          <CardTitle className="text-2xl">Login</CardTitle>
+          <CardDescription>
+            Enter your email below to login to your account.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {/* This is the magic fix: */}
+          <Suspense fallback={<div>Loading form...</div>}>
+            <LoginForm />
+          </Suspense>
+
+          <div className="mt-4 text-center text-sm">
+            Don&apos;t have an account?{' '}
+            <Link href="/register" className="underline">
+              Sign up
+            </Link>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
