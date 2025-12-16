@@ -1,5 +1,3 @@
-// src/app/provider/profile/page.tsx
-
 import {
   Card,
   CardContent,
@@ -12,17 +10,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/auth.config"; // ✅ Import from your NextAuth config
-import { updateProviderProfile } from "@/lib/actions"; // ✅ Server action
+import { auth } from "@/auth"; // ✅ Correct v5 import
+import { updateProviderProfile } from "@/lib/actions";
 import { notFound, redirect } from "next/navigation";
 
 export default async function ProviderProfilePage() {
-  // 1. Get the server-side session
-  const session = await getServerSession(authOptions);
+  // 1. Get the server-side session using V5 auth
+  const session = await auth();
 
   if (!session?.user) {
-    redirect("/login"); // Safety check — middleware should handle this
+    redirect("/login");
   }
 
   // 2. Fetch the provider's full details

@@ -26,8 +26,7 @@ import {
   Edit,
 } from "lucide-react";
 import Link from "next/link";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/auth.config"; // <-- use your existing config
+import { auth } from "@/auth"; // ✅ Correct v5 import
 import { prisma } from "@/lib/prisma";
 import { ListingStatus } from "@prisma/client";
 import { deleteListing } from "@/lib/actions";
@@ -46,8 +45,8 @@ const getStatusVariant = (status: ListingStatus) => {
 };
 
 export default async function ProviderDashboard() {
-  // ✅ use getServerSession instead of auth()
-  const session = await getServerSession(authOptions);
+  // ✅ V5 Auth
+  const session = await auth();
 
   if (!session?.user || session.user.role !== "PROVIDER") {
     return <p>Access Denied. You must be a logged-in provider.</p>;

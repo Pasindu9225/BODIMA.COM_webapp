@@ -6,10 +6,8 @@ import { prisma } from "@/lib/prisma";
 import { Role, UserStatus, ListingStatus } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "../auth.config";
+import { auth } from "@/auth"; // ✅ Correct v5 import
 import type { Prisma } from "@prisma/client";
-import auth from "@/auth";
 
 const SALT_ROUNDS = 10;
 
@@ -251,7 +249,8 @@ export async function deleteAmenity(amenityId: string, formData: FormData) {
 export async function createListing(
   values: z.infer<typeof listingFormSchema>
 ): Promise<FormState> {
-  const session = await getServerSession(authOptions);
+  // ✅ V5 Auth
+  const session = await auth();
   if (!session?.user?.id || session.user.role !== "PROVIDER") {
     return { success: false, message: "Error: Not authorized." };
   }
@@ -325,7 +324,8 @@ export async function createListing(
 }
 
 export async function updateListing(listingId: string, formData: FormData) {
-  const session = await getServerSession(authOptions);
+  // ✅ V5 Auth
+  const session = await auth();
   if (!session?.user?.id || session.user.role !== "PROVIDER") {
     throw new Error("Unauthorized");
   }
@@ -401,7 +401,8 @@ export async function updateListing(listingId: string, formData: FormData) {
 }
 
 export async function deleteListing(listingId: string, formData: FormData) {
-  const session = await getServerSession(authOptions);
+  // ✅ V5 Auth
+  const session = await auth();
   const providerId = session?.user?.id;
   if (!providerId || session.user.role !== "PROVIDER") {
     throw new Error("Not authorized");
@@ -425,7 +426,8 @@ export async function deleteListing(listingId: string, formData: FormData) {
 }
 
 export async function updateProviderProfile(formData: FormData): Promise<void> {
-  const session = await getServerSession(authOptions);
+  // ✅ V5 Auth
+  const session = await auth();
   if (!session?.user?.id) throw new Error("Unauthorized");
 
   const name = formData.get("name") as string;
@@ -454,6 +456,7 @@ export async function updateProviderPassword(
   formData: FormData
 ): Promise<FormState> {
   try {
+    // ✅ V5 Auth
     const session = await auth();
     if (!session?.user?.id || session.user.role !== "PROVIDER") {
       return { success: false, message: "Error: Not authorized." };
@@ -521,7 +524,8 @@ export async function getUniversities() {
 
 export async function addUniversity(formData: FormData) {
   try {
-    const session = await getServerSession(authOptions);
+    // ✅ V5 Auth
+    const session = await auth();
 
     if (!session?.user || session.user.role !== "ADMIN") {
       return { success: false, message: "Unauthorized access." };
@@ -644,7 +648,10 @@ export async function searchListings(query: string) {
     return [];
   }
 }
-export async function getListingsNearUniversity(universityName: string, radiusKm = 5) {
+export async function getListingsNearUniversity(
+  universityName: string,
+  radiusKm = 5
+) {
   try {
     const university = await prisma.university.findFirst({
       where: {
@@ -668,8 +675,8 @@ export async function getListingsNearUniversity(universityName: string, radiusKm
       const a =
         Math.sin(dLat / 2) * Math.sin(dLat / 2) +
         Math.cos(university.lat * (Math.PI / 180)) *
-          Math.cos(listing.lat * (Math.PI / 180)) *
-          Math.sin(dLng / 2) * Math.sin(dLng / 2);
+        Math.cos(listing.lat * (Math.PI / 180)) *
+        Math.sin(dLng / 2) * Math.sin(dLng / 2);
       const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
       const distance = R * c; // in km
       return distance <= radiusKm;
