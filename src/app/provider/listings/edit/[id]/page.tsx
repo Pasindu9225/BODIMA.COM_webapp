@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/select";
 import { prisma } from "@/lib/prisma";
 import { updateListing } from "@/lib/actions";
-import { auth } from "../../../../../auth";
+import { auth } from '@/auth';
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
