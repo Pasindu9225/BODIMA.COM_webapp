@@ -1,69 +1,64 @@
 // src/auth.config.ts
-import { PrismaAdapter } from "@next-auth/prisma-adapter";
-import { prisma } from "@/lib/prisma";
-import CredentialsProvider from "next-auth/providers/credentials";
-import bcryptjs from "bcryptjs";
-import type { NextAuthOptions } from "next-auth";
+import type { NextAuthConfig } from 'next-auth';
 
-export const authOptions: NextAuthOptions = {
-  adapter: PrismaAdapter(prisma),
-
-  providers: [
-    CredentialsProvider({
-      name: "Credentials",
-      credentials: {
-        email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" },
-      },
-      async authorize(credentials) {
-        if (!credentials?.email || !credentials.password) {
-          throw new Error("Missing credentials");
-        }
-
-        const user = await prisma.user.findUnique({
-          where: { email: credentials.email },
-        });
-
-        if (!user) {
-          throw new Error("No user found with this email");
-        }
-
-        if (!user.password) {
-          throw new Error("User password not set");
-        }
-
-        const isValid = await bcryptjs.compare(
-          credentials.password,
-          user.password
-        );
-
-        if (!isValid) {
-          throw new Error("Invalid password");
-        }
-
-        return user;
-      },
-    }),
-  ],
-
-  session: { strategy: "jwt" },
-
+export const authConfig = {
+  session: { strategy: 'jwt' },
+  pages: {
+    signIn: '/login', // Redirect here if not logged in
+  },
+  providers: [], // Providers are defined in auth.ts, not here
   callbacks: {
-    async jwt({ token, user }) {
-      if (user) {
-        token.id = user.id;
-        token.role = user.role;
+    // This 'authorized' callback runs on every request in Middleware
+    authorized({ auth, request: { nextUrl } }) {
+      const isLoggedIn = !!auth?.user;
+      const { pathname } = nextUrl;
+      const role = auth?.user?.role;
+      const status = auth?.user?.status;
+
+      // 1. Redirect logged-in users away from auth pages (login/register)
+      if (pathname.startsWith('/login') || pathname.startsWith('/register')) {
+        if (isLoggedIn) {
+          if (role === 'ADMIN') return Response.redirect(new URL('/admin/dashboard', nextUrl));
+          if (role === 'PROVIDER') return Response.redirect(new URL('/provider/dashboard', nextUrl));
+          return Response.redirect(new URL('/', nextUrl));
+        }
+        return true;
       }
+
+      // 2. Protect Admin Routes
+      if (pathname.startsWith('/admin')) {
+        if (!isLoggedIn || role !== 'ADMIN') {
+          return Response.redirect(new URL('/login', nextUrl));
+        }
+        return true;
+      }
+
+      // 3. Protect Provider Routes
+      if (pathname.startsWith('/provider')) {
+        if (!isLoggedIn || role !== 'PROVIDER') {
+          return Response.redirect(new URL('/login', nextUrl));
+        }
+        // Lock pending providers to the pending page
+        if (status === 'PENDING' && pathname !== '/provider/pending') {
+          return Response.redirect(new URL('/provider/pending', nextUrl));
+        }
+        // Kick approved providers out of the pending page
+        if (status === 'APPROVED' && pathname === '/provider/pending') {
+          return Response.redirect(new URL('/provider/dashboard', nextUrl));
+        }
+        return true;
+      }
+
+      // 4. Public Routes (Map, Home, Search, Listing Details)
+      return true;
+    },
+
+    // These help TypeScript, but the real logic is in auth.ts
+    async jwt({ token, user }) {
       return token;
     },
     async session({ session, token }) {
-      if (token) {
-        session.user.id = token.id;
-        session.user.role = token.role;
-      }
       return session;
     },
   },
-
-  secret: process.env.NEXTAUTH_SECRET,
-};
+} satisfies NextAuthConfig;
